@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  flutter-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Dart Tests
+        run: flutter test
+
+  rust-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/engine
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Format Check
+        run: cargo fmt --check
+
+      - name: Rust Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Rust Tests
+        run: cargo test
+
+  specs-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify tasks have state
+        run: |
+          grep -R "## Estado" specs/tasks >/dev/null
+
+      - name: Verify no pending task without evidence line
+        run: |
+          if grep -R "## Evidencia de cierre" specs/tasks >/dev/null; then
+            echo "Specs evidence sections found."
+          else
+            echo "Missing evidence sections in tasks." >&2
+            exit 1
+          fi

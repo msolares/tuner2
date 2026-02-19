@@ -1,0 +1,8 @@
+[package]
+name = "afinador_engine"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "afinador_engine"
+crate-type = ["cdylib", "rlib"]

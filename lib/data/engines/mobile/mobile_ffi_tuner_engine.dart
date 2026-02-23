@@ -12,14 +12,18 @@ import '../../../domain/services/tuner_engine.dart';
 import '../../../domain/services/tuner_engine_exception.dart';
 import '../../audio/audio_frame_source.dart';
 import '../../audio/audio_pcm_frame.dart';
+import '../common/pitch_range.dart';
+import '../common/pitch_stabilizer.dart';
 import '../common/simple_pitch_detector.dart';
 
 class MobileFfiTunerEngine implements TunerEngine {
   MobileFfiTunerEngine({
     required AudioFrameSource frameSource,
     SimplePitchDetector? fallbackDetector,
+    PitchStabilizer? stabilizer,
   })  : _frameSource = frameSource,
-        _fallbackDetector = fallbackDetector ?? SimplePitchDetector();
+        _fallbackDetector = fallbackDetector ?? SimplePitchDetector(),
+        _stabilizer = stabilizer ?? PitchStabilizer();
 
   final AudioFrameSource _frameSource;
   final SimplePitchDetector _fallbackDetector;
@@ -29,6 +33,10 @@ class MobileFfiTunerEngine implements TunerEngine {
   int _handle = 0;
   TunerSettings _settings = TunerSettings.defaults;
   bool _started = false;
+  final PitchStabilizer _stabilizer;
+  int _lastEmittedTimestampMs = 0;
+
+  static const int _emitIntervalMs = 90;
 
   @override
   Future<void> start(TunerSettings settings) async {
@@ -42,6 +50,8 @@ class MobileFfiTunerEngine implements TunerEngine {
     }
     await stop();
     _settings = settings;
+    _stabilizer.reset();
+    _lastEmittedTimestampMs = 0;
     _ffi = _RustBindings.tryLoad();
     if (_ffi != null) {
       _handle = _ffi!.init(_encodeSettings(settings));
@@ -77,6 +87,8 @@ class MobileFfiTunerEngine implements TunerEngine {
       }
     }
     _started = false;
+    _stabilizer.reset();
+    _lastEmittedTimestampMs = 0;
   }
 
   void _onFrame(AudioPcmFrame frame) {
@@ -85,7 +97,14 @@ class MobileFfiTunerEngine implements TunerEngine {
     }
     final sample = _ffi != null ? _processFrameWithFfi(frame) : _processFrameWithFallback(frame);
     if (sample != null) {
-      _controller.add(sample);
+      final stabilized = _stabilizer.stabilize(
+        sample: sample.copyWith(timestampMs: frame.timestampMs),
+        range: rangeForPreset(_settings.instrumentPreset),
+        smoothing: _settings.smoothing,
+      );
+      if (_shouldEmit(stabilized.timestampMs)) {
+        _controller.add(stabilized);
+      }
     }
   }
 
@@ -107,12 +126,24 @@ class MobileFfiTunerEngine implements TunerEngine {
   }
 
   PitchSample? _processFrameWithFallback(AudioPcmFrame frame) {
+    final range = rangeForPreset(_settings.instrumentPreset);
     return _fallbackDetector.detect(
       pcm: frame.pcmFloat32,
       sampleRateHz: frame.sampleRateHz,
       a4Hz: _settings.a4Hz,
       timestampMs: frame.timestampMs,
+      noiseGateDb: _settings.noiseGateDb,
+      minFrequencyHz: range.minHz,
+      maxFrequencyHz: range.maxHz,
     );
+  }
+
+  bool _shouldEmit(int timestampMs) {
+    if (_lastEmittedTimestampMs == 0 || timestampMs - _lastEmittedTimestampMs >= _emitIntervalMs) {
+      _lastEmittedTimestampMs = timestampMs;
+      return true;
+    }
+    return false;
   }
 
   String _encodeSettings(TunerSettings settings) {

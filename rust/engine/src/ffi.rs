@@ -1,6 +1,7 @@
-use crate::detector::{detect_pitch, Detection};
+use crate::detector::{detect_pitch, Detection, DetectorConfig};
 use crate::input::validate_frame;
 use crate::smoothing::{SmoothedPitch, Smoother};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -64,7 +65,7 @@ impl PitchResult {
 
 #[derive(Debug, Clone)]
 struct EngineHandle {
-    config_json: String,
+    config: EngineConfig,
     smoother: Smoother,
 }
 
@@ -75,22 +76,42 @@ fn handles() -> &'static Mutex<HashMap<u64, EngineHandle>> {
     HANDLES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn parse_json_ptr(config_json_ptr: *const c_char) -> Result<String, ErrorCode> {
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+struct EngineConfig {
+    #[serde(rename = "a4Hz")]
+    a4_hz: f32,
+    #[serde(rename = "instrumentPreset")]
+    instrument_preset: String,
+    #[serde(rename = "noiseGateDb")]
+    noise_gate_db: f32,
+    smoothing: f32,
+}
+
+impl Default for EngineConfig {
+    fn default() -> Self {
+        Self {
+            a4_hz: 440.0,
+            instrument_preset: "chromatic".to_owned(),
+            noise_gate_db: -60.0,
+            smoothing: 0.2,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PitchRange {
+    min_hz: f32,
+    max_hz: f32,
+}
+
+fn parse_config_ptr(config_json_ptr: *const c_char) -> Result<EngineConfig, ErrorCode> {
     if config_json_ptr.is_null() {
         return Err(ErrorCode::NullPointer);
     }
     let c_str = unsafe { CStr::from_ptr(config_json_ptr) };
-    let config = c_str.to_str().map_err(|_| ErrorCode::InvalidUtf8)?.to_owned();
-    if !looks_like_json(&config) {
-        return Err(ErrorCode::InvalidJson);
-    }
-    Ok(config)
-}
-
-fn looks_like_json(input: &str) -> bool {
-    let trimmed = input.trim();
-    (trimmed.starts_with('{') && trimmed.ends_with('}'))
-        || (trimmed.starts_with('[') && trimmed.ends_with(']'))
+    let config_text = c_str.to_str().map_err(|_| ErrorCode::InvalidUtf8)?;
+    serde_json::from_str::<EngineConfig>(config_text).map_err(|_| ErrorCode::InvalidJson)
 }
 
 fn map_internal_err(err: &str) -> ErrorCode {
@@ -101,22 +122,74 @@ fn map_internal_err(err: &str) -> ErrorCode {
     }
 }
 
-pub fn process_frame_internal(pcm: &[f32], sample_rate: u32) -> Result<Detection, &'static str> {
+pub fn process_frame_internal(
+    pcm: &[f32],
+    sample_rate: u32,
+    config: &EngineConfig,
+) -> Result<Detection, &'static str> {
     let frame = validate_frame(pcm, sample_rate)?;
-    detect_pitch(frame)
+    let range = range_for_preset(&config.instrument_preset);
+    detect_pitch(
+        frame,
+        DetectorConfig {
+            min_hz: range.min_hz,
+            max_hz: range.max_hz,
+            noise_gate_db: config.noise_gate_db,
+        },
+    )
+}
+
+fn range_for_preset(preset: &str) -> PitchRange {
+    match preset {
+        "guitar_standard" => PitchRange {
+            min_hz: 70.0,
+            max_hz: 420.0,
+        },
+        "bass_standard" => PitchRange {
+            min_hz: 30.0,
+            max_hz: 260.0,
+        },
+        "ukulele_standard" => PitchRange {
+            min_hz: 180.0,
+            max_hz: 500.0,
+        },
+        "violin_standard" => PitchRange {
+            min_hz: 180.0,
+            max_hz: 1200.0,
+        },
+        _ => PitchRange {
+            min_hz: 50.0,
+            max_hz: 2000.0,
+        },
+    }
+}
+
+fn hz_to_note_and_cents(hz: f32, a4_hz: f32) -> (String, f32) {
+    if hz <= 0.0 {
+        return ("--".to_owned(), 0.0);
+    }
+    let safe_a4 = a4_hz.clamp(430.0, 450.0);
+    let midi = 69.0 + 12.0 * (hz / safe_a4).log2();
+    let nearest_midi = midi.round() as i32;
+    let nearest_hz = safe_a4 * 2.0_f32.powf((nearest_midi - 69) as f32 / 12.0);
+    let cents = 1200.0 * (hz / nearest_hz).log2();
+    let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    let index = ((nearest_midi % 12) + 12) % 12;
+    let octave = nearest_midi / 12 - 1;
+    (format!("{}{}", names[index as usize], octave), cents)
 }
 
 #[no_mangle]
 pub extern "C" fn tuner_init(config_json_ptr: *const c_char) -> u64 {
     let result = catch_unwind(|| -> Result<u64, ErrorCode> {
-        let config_json = parse_json_ptr(config_json_ptr)?;
+        let config = parse_config_ptr(config_json_ptr)?;
         let handle_id = NEXT_HANDLE.fetch_add(1, Ordering::Relaxed);
         let mut guard = handles().lock().map_err(|_| ErrorCode::InternalError)?;
         guard.insert(
             handle_id,
             EngineHandle {
-                config_json,
-                smoother: Smoother::default(),
+                smoother: Smoother::new(config.smoothing),
+                config,
             },
         );
         Ok(handle_id)
@@ -143,11 +216,12 @@ pub extern "C" fn tuner_process_frame(
             return Err(ErrorCode::InvalidSampleRate);
         }
         let pcm = unsafe { std::slice::from_raw_parts(pcm_ptr, len) };
-        let detection = process_frame_internal(pcm, sample_rate).map_err(map_internal_err)?;
         let mut guard = handles().lock().map_err(|_| ErrorCode::InternalError)?;
         let state = guard.get_mut(&handle).ok_or(ErrorCode::InvalidHandle)?;
+        let detection = process_frame_internal(pcm, sample_rate, &state.config).map_err(map_internal_err)?;
         let smoothed: SmoothedPitch = state.smoother.apply(detection);
-        Ok(PitchResult::ok(smoothed.hz, 0.0, smoothed.confidence, "A4"))
+        let (note, cents) = hz_to_note_and_cents(smoothed.hz, state.config.a4_hz);
+        Ok(PitchResult::ok(smoothed.hz, cents, smoothed.confidence, &note))
     });
 
     match result {
@@ -160,10 +234,11 @@ pub extern "C" fn tuner_process_frame(
 #[no_mangle]
 pub extern "C" fn tuner_update_config(handle: u64, config_json_ptr: *const c_char) -> i32 {
     let result = catch_unwind(|| -> Result<(), ErrorCode> {
-        let config_json = parse_json_ptr(config_json_ptr)?;
+        let config = parse_config_ptr(config_json_ptr)?;
         let mut guard = handles().lock().map_err(|_| ErrorCode::InternalError)?;
         let state = guard.get_mut(&handle).ok_or(ErrorCode::InvalidHandle)?;
-        state.config_json = config_json;
+        state.smoother.set_smoothing(config.smoothing);
+        state.config = config;
         Ok(())
     });
 
@@ -188,5 +263,89 @@ pub extern "C" fn tuner_dispose(handle: u64) -> i32 {
         Ok(Ok(())) => ErrorCode::Ok as i32,
         Ok(Err(code)) => code as i32,
         Err(_) => ErrorCode::InternalError as i32,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{tuner_dispose, tuner_init, tuner_process_frame, tuner_update_config, ErrorCode, PitchResult};
+    use std::f32::consts::PI;
+    use std::ffi::CString;
+
+    #[test]
+    fn returns_real_note_and_cents_instead_of_fixed_values() {
+        let config = CString::new(
+            r#"{"a4Hz":440.0,"instrumentPreset":"chromatic","noiseGateDb":-60.0,"smoothing":0.2}"#,
+        )
+        .expect("valid cstring");
+        let handle = tuner_init(config.as_ptr());
+        assert_ne!(handle, 0);
+
+        let frame = sine_wave(329.63, 48_000, 4096);
+        let result = tuner_process_frame(handle, frame.as_ptr(), frame.len(), 48_000);
+
+        assert_eq!(result.error_code, ErrorCode::Ok as i32);
+        let note = note_from_result(result);
+        assert_eq!(note, "E4");
+        assert!(result.cents.abs() < 12.0);
+
+        assert_eq!(tuner_dispose(handle), ErrorCode::Ok as i32);
+    }
+
+    #[test]
+    fn update_config_changes_cents_in_hot_mode() {
+        let config = CString::new(
+            r#"{"a4Hz":440.0,"instrumentPreset":"chromatic","noiseGateDb":-60.0,"smoothing":0.2}"#,
+        )
+        .expect("valid cstring");
+        let handle = tuner_init(config.as_ptr());
+        assert_ne!(handle, 0);
+
+        let frame = sine_wave(440.0, 48_000, 4096);
+        let baseline = tuner_process_frame(handle, frame.as_ptr(), frame.len(), 48_000);
+        assert_eq!(baseline.error_code, ErrorCode::Ok as i32);
+
+        let updated = CString::new(
+            r#"{"a4Hz":442.0,"instrumentPreset":"chromatic","noiseGateDb":-60.0,"smoothing":0.2}"#,
+        )
+        .expect("valid cstring");
+        assert_eq!(tuner_update_config(handle, updated.as_ptr()), ErrorCode::Ok as i32);
+
+        let adjusted = tuner_process_frame(handle, frame.as_ptr(), frame.len(), 48_000);
+        assert_eq!(adjusted.error_code, ErrorCode::Ok as i32);
+        assert_eq!(note_from_result(adjusted), "A4");
+        assert!(adjusted.cents < -5.0);
+
+        assert_eq!(tuner_dispose(handle), ErrorCode::Ok as i32);
+    }
+
+    #[test]
+    fn rejects_invalid_json_in_update_config() {
+        let config = CString::new(
+            r#"{"a4Hz":440.0,"instrumentPreset":"chromatic","noiseGateDb":-60.0,"smoothing":0.2}"#,
+        )
+        .expect("valid cstring");
+        let handle = tuner_init(config.as_ptr());
+        assert_ne!(handle, 0);
+
+        let invalid = CString::new("{invalid json").expect("valid cstring");
+        let code = tuner_update_config(handle, invalid.as_ptr());
+        assert_eq!(code, ErrorCode::InvalidJson as i32);
+
+        assert_eq!(tuner_dispose(handle), ErrorCode::Ok as i32);
+    }
+
+    fn note_from_result(result: PitchResult) -> String {
+        let len = result.note_len as usize;
+        String::from_utf8_lossy(&result.note[..len]).to_string()
+    }
+
+    fn sine_wave(frequency_hz: f32, sample_rate: u32, len: usize) -> Vec<f32> {
+        (0..len)
+            .map(|i| {
+                let phase = 2.0 * PI * frequency_hz * i as f32 / sample_rate as f32;
+                phase.sin() * 0.6
+            })
+            .collect()
     }
 }

@@ -25,6 +25,13 @@ Mapeo Dart-Rust:
 - Rust: `u32`
 - Dart FFI: `Uint32`
 
+Config JSON esperado:
+
+- `a4Hz: number` (se normaliza internamente para conversion de nota/cents)
+- `instrumentPreset: string` (`chromatic`, `guitar_standard`, `bass_standard`, `ukulele_standard`, `violin_standard`)
+- `noiseGateDb: number` (umbral de energia en dB)
+- `smoothing: number` (factor esperado en `[0.0, 1.0]`)
+
 Estructura `PitchResult`:
 
 - `error_code: i32`

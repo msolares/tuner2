@@ -9,10 +9,13 @@ Entrada:
 - Frame PCM `f32`, mono, normalizado.
 
 Pasos:
-1. Calcular RMS del frame para detectar nivel util de senal.
-2. Estimar frecuencia por `zero-crossing` con umbral anti-ruido.
-3. Validar rango de frecuencia util (`50 Hz` a `1200 Hz`).
-4. Calcular `periodicity_hint` como proxy de periodicidad.
+1. Validar frame (`len` minimo y `sample_rate` valido).
+2. Calcular RMS y aplicar `noise_gate_db` para cortar detecciones en silencio/ruido bajo.
+3. Remover offset DC (centrado por media).
+4. Calcular autocorrelacion normalizada en el rango de lags `min_hz..max_hz`.
+5. Buscar pico principal por maximo local y aplicar correccion armonica por multiplos de lag.
+6. Refinar lag con interpolacion parabolica para reducir error de cuantizacion.
+7. Convertir lag a frecuencia (`hz`) y derivar `periodicity_hint` desde la correlacion.
 
 Salida intermedia:
 - `Detection { hz, signal_rms, periodicity_hint }`
@@ -33,13 +36,13 @@ Confidence compuesta:
 ## Objetivos de performance/calidad (MVP)
 
 - Precision objetivo:
-- Error mediano <= `+/- 5 cents` en notas sostenidas (82 Hz a 880 Hz) con señal limpia.
+- Error mediano <= `+/- 5 cents` en notas sostenidas (82 Hz a 880 Hz) con senal limpia.
 - Latencia objetivo:
 - <= `70 ms` para estabilizar lectura visual en movil (3 frames aprox a 48k/1024).
 - <= `100 ms` en Web por variacion de buffers del navegador.
 
 ## Riesgos conocidos
 
-- `zero-crossing` pierde precision con armónicos fuertes.
+- Senales con armonicos muy dominantes pueden inducir errores de fundamental si no se calibra bien la correccion armonica.
 - En ruido alto, `confidence` puede caer de forma abrupta.
-- El detector final de produccion puede cambiar (autocorrelacion/YIN) sin romper contrato de salida.
+- El detector final de produccion puede cambiar (autocorrelacion/YIN/ML) sin romper contrato de salida.

@@ -30,3 +30,16 @@ Eventos publicos:
 
 Regla de afinacion:
 - `InTune` cuando `confidence >= 0.6` y `abs(cents) <= 5.0`.
+
+## Song Tuning BLoC (T033)
+
+Estados:
+- `SongTuningState` con `idle`, `loading`, `success`, `error`.
+
+Eventos:
+- `SongNameChanged`
+- `SongTuningSubmitted`
+
+Reglas:
+- Boton de consulta habilitado solo cuando hay texto no vacio y no hay request en curso.
+- Errores de `SongTuningLookupException` se mapean a mensajes de UI recuperables.

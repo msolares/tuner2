@@ -13,6 +13,7 @@ import '../../../domain/services/tuner_engine_exception.dart';
 import '../../audio/audio_frame_source.dart';
 import '../../audio/audio_pcm_frame.dart';
 import '../common/pitch_range.dart';
+import '../common/pitch_stabilization_profile.dart';
 import '../common/pitch_stabilizer.dart';
 import '../common/simple_pitch_detector.dart';
 
@@ -97,10 +98,12 @@ class MobileFfiTunerEngine implements TunerEngine {
     }
     final sample = _ffi != null ? _processFrameWithFfi(frame) : _processFrameWithFallback(frame);
     if (sample != null) {
+      final preset = _settings.instrumentPreset;
       final stabilized = _stabilizer.stabilize(
         sample: sample.copyWith(timestampMs: frame.timestampMs),
-        range: rangeForPreset(_settings.instrumentPreset),
+        range: rangeForPreset(preset),
         smoothing: _settings.smoothing,
+        profile: stabilizationProfileForPreset(preset),
       );
       if (_shouldEmit(stabilized.timestampMs)) {
         _controller.add(stabilized);

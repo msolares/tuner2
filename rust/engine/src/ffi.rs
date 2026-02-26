@@ -1,7 +1,6 @@
 use crate::detector::{detect_pitch, Detection, DetectorConfig};
 use crate::input::validate_frame;
 use crate::smoothing::{SmoothedPitch, Smoother};
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -76,14 +75,10 @@ fn handles() -> &'static Mutex<HashMap<u64, EngineHandle>> {
     HANDLES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
+#[derive(Debug, Clone)]
 struct EngineConfig {
-    #[serde(rename = "a4Hz")]
     a4_hz: f32,
-    #[serde(rename = "instrumentPreset")]
     instrument_preset: String,
-    #[serde(rename = "noiseGateDb")]
     noise_gate_db: f32,
     smoothing: f32,
 }
@@ -111,7 +106,238 @@ fn parse_config_ptr(config_json_ptr: *const c_char) -> Result<EngineConfig, Erro
     }
     let c_str = unsafe { CStr::from_ptr(config_json_ptr) };
     let config_text = c_str.to_str().map_err(|_| ErrorCode::InvalidUtf8)?;
-    serde_json::from_str::<EngineConfig>(config_text).map_err(|_| ErrorCode::InvalidJson)
+    parse_engine_config(config_text)
+}
+
+fn parse_engine_config(config_text: &str) -> Result<EngineConfig, ErrorCode> {
+    let mut parser = JsonParser::new(config_text);
+    let mut config = EngineConfig::default();
+
+    parser.consume_byte(b'{')?;
+    parser.skip_whitespace();
+    if parser.try_consume_byte(b'}') {
+        return Ok(config);
+    }
+
+    loop {
+        let key = parser.parse_string()?;
+        parser.skip_whitespace();
+        parser.consume_byte(b':')?;
+        parser.skip_whitespace();
+
+        match key.as_str() {
+            "a4Hz" => {
+                config.a4_hz = parser.parse_number()?;
+            }
+            "instrumentPreset" => {
+                config.instrument_preset = parser.parse_string()?;
+            }
+            "noiseGateDb" => {
+                config.noise_gate_db = parser.parse_number()?;
+            }
+            "smoothing" => {
+                config.smoothing = parser.parse_number()?;
+            }
+            _ => parser.skip_value()?,
+        }
+
+        parser.skip_whitespace();
+        if parser.try_consume_byte(b',') {
+            parser.skip_whitespace();
+            continue;
+        }
+        parser.consume_byte(b'}')?;
+        break;
+    }
+
+    parser.skip_whitespace();
+    if !parser.is_end() {
+        return Err(ErrorCode::InvalidJson);
+    }
+    if !config.a4_hz.is_finite()
+        || !config.noise_gate_db.is_finite()
+        || !config.smoothing.is_finite()
+    {
+        return Err(ErrorCode::InvalidJson);
+    }
+
+    Ok(config)
+}
+
+struct JsonParser<'a> {
+    bytes: &'a [u8],
+    index: usize,
+}
+
+impl<'a> JsonParser<'a> {
+    fn new(text: &'a str) -> Self {
+        Self {
+            bytes: text.as_bytes(),
+            index: 0,
+        }
+    }
+
+    fn is_end(&self) -> bool {
+        self.index >= self.bytes.len()
+    }
+
+    fn skip_whitespace(&mut self) {
+        while let Some(byte) = self.peek_byte() {
+            if matches!(byte, b' ' | b'\n' | b'\r' | b'\t') {
+                self.index += 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn peek_byte(&self) -> Option<u8> {
+        self.bytes.get(self.index).copied()
+    }
+
+    fn consume_byte(&mut self, expected: u8) -> Result<(), ErrorCode> {
+        match self.peek_byte() {
+            Some(found) if found == expected => {
+                self.index += 1;
+                Ok(())
+            }
+            _ => Err(ErrorCode::InvalidJson),
+        }
+    }
+
+    fn try_consume_byte(&mut self, expected: u8) -> bool {
+        if matches!(self.peek_byte(), Some(found) if found == expected) {
+            self.index += 1;
+            return true;
+        }
+        false
+    }
+
+    fn parse_string(&mut self) -> Result<String, ErrorCode> {
+        self.consume_byte(b'"')?;
+        let mut out = String::new();
+
+        while let Some(byte) = self.peek_byte() {
+            self.index += 1;
+            match byte {
+                b'"' => return Ok(out),
+                b'\\' => {
+                    let escaped = self.peek_byte().ok_or(ErrorCode::InvalidJson)?;
+                    self.index += 1;
+                    match escaped {
+                        b'"' => out.push('"'),
+                        b'\\' => out.push('\\'),
+                        b'/' => out.push('/'),
+                        b'b' => out.push('\u{0008}'),
+                        b'f' => out.push('\u{000c}'),
+                        b'n' => out.push('\n'),
+                        b'r' => out.push('\r'),
+                        b't' => out.push('\t'),
+                        b'u' => {
+                            for _ in 0..4 {
+                                let hex = self.peek_byte().ok_or(ErrorCode::InvalidJson)?;
+                                self.index += 1;
+                                if !hex.is_ascii_hexdigit() {
+                                    return Err(ErrorCode::InvalidJson);
+                                }
+                            }
+                        }
+                        _ => return Err(ErrorCode::InvalidJson),
+                    }
+                }
+                other => out.push(other as char),
+            }
+        }
+        Err(ErrorCode::InvalidJson)
+    }
+
+    fn parse_number(&mut self) -> Result<f32, ErrorCode> {
+        let start = self.index;
+        while let Some(byte) = self.peek_byte() {
+            if byte.is_ascii_digit() || matches!(byte, b'+' | b'-' | b'.' | b'e' | b'E') {
+                self.index += 1;
+            } else {
+                break;
+            }
+        }
+
+        if self.index == start {
+            return Err(ErrorCode::InvalidJson);
+        }
+
+        let token = std::str::from_utf8(&self.bytes[start..self.index])
+            .map_err(|_| ErrorCode::InvalidJson)?;
+        token.parse::<f32>().map_err(|_| ErrorCode::InvalidJson)
+    }
+
+    fn skip_value(&mut self) -> Result<(), ErrorCode> {
+        self.skip_whitespace();
+        match self.peek_byte() {
+            Some(b'"') => {
+                let _ = self.parse_string()?;
+                Ok(())
+            }
+            Some(b'{') => self.skip_object(),
+            Some(b'[') => self.skip_array(),
+            Some(b't') => self.consume_literal(b"true"),
+            Some(b'f') => self.consume_literal(b"false"),
+            Some(b'n') => self.consume_literal(b"null"),
+            Some(_) => {
+                let _ = self.parse_number()?;
+                Ok(())
+            }
+            None => Err(ErrorCode::InvalidJson),
+        }
+    }
+
+    fn skip_object(&mut self) -> Result<(), ErrorCode> {
+        self.consume_byte(b'{')?;
+        self.skip_whitespace();
+        if self.try_consume_byte(b'}') {
+            return Ok(());
+        }
+
+        loop {
+            let _ = self.parse_string()?;
+            self.skip_whitespace();
+            self.consume_byte(b':')?;
+            self.skip_whitespace();
+            self.skip_value()?;
+            self.skip_whitespace();
+            if self.try_consume_byte(b',') {
+                self.skip_whitespace();
+                continue;
+            }
+            self.consume_byte(b'}')?;
+            return Ok(());
+        }
+    }
+
+    fn skip_array(&mut self) -> Result<(), ErrorCode> {
+        self.consume_byte(b'[')?;
+        self.skip_whitespace();
+        if self.try_consume_byte(b']') {
+            return Ok(());
+        }
+
+        loop {
+            self.skip_value()?;
+            self.skip_whitespace();
+            if self.try_consume_byte(b',') {
+                self.skip_whitespace();
+                continue;
+            }
+            self.consume_byte(b']')?;
+            return Ok(());
+        }
+    }
+
+    fn consume_literal(&mut self, literal: &[u8]) -> Result<(), ErrorCode> {
+        for expected in literal {
+            self.consume_byte(*expected)?;
+        }
+        Ok(())
+    }
 }
 
 fn map_internal_err(err: &str) -> ErrorCode {
@@ -122,7 +348,7 @@ fn map_internal_err(err: &str) -> ErrorCode {
     }
 }
 
-pub fn process_frame_internal(
+fn process_frame_internal(
     pcm: &[f32],
     sample_rate: u32,
     config: &EngineConfig,
@@ -173,7 +399,9 @@ fn hz_to_note_and_cents(hz: f32, a4_hz: f32) -> (String, f32) {
     let nearest_midi = midi.round() as i32;
     let nearest_hz = safe_a4 * 2.0_f32.powf((nearest_midi - 69) as f32 / 12.0);
     let cents = 1200.0 * (hz / nearest_hz).log2();
-    let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    let names = [
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+    ];
     let index = ((nearest_midi % 12) + 12) % 12;
     let octave = nearest_midi / 12 - 1;
     (format!("{}{}", names[index as usize], octave), cents)
@@ -218,10 +446,16 @@ pub extern "C" fn tuner_process_frame(
         let pcm = unsafe { std::slice::from_raw_parts(pcm_ptr, len) };
         let mut guard = handles().lock().map_err(|_| ErrorCode::InternalError)?;
         let state = guard.get_mut(&handle).ok_or(ErrorCode::InvalidHandle)?;
-        let detection = process_frame_internal(pcm, sample_rate, &state.config).map_err(map_internal_err)?;
+        let detection =
+            process_frame_internal(pcm, sample_rate, &state.config).map_err(map_internal_err)?;
         let smoothed: SmoothedPitch = state.smoother.apply(detection);
         let (note, cents) = hz_to_note_and_cents(smoothed.hz, state.config.a4_hz);
-        Ok(PitchResult::ok(smoothed.hz, cents, smoothed.confidence, &note))
+        Ok(PitchResult::ok(
+            smoothed.hz,
+            cents,
+            smoothed.confidence,
+            &note,
+        ))
     });
 
     match result {
@@ -268,7 +502,10 @@ pub extern "C" fn tuner_dispose(handle: u64) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{tuner_dispose, tuner_init, tuner_process_frame, tuner_update_config, ErrorCode, PitchResult};
+    use super::{
+        parse_engine_config, tuner_dispose, tuner_init, tuner_process_frame, tuner_update_config,
+        ErrorCode, PitchResult,
+    };
     use std::f32::consts::PI;
     use std::ffi::CString;
 
@@ -309,7 +546,10 @@ mod tests {
             r#"{"a4Hz":442.0,"instrumentPreset":"chromatic","noiseGateDb":-60.0,"smoothing":0.2}"#,
         )
         .expect("valid cstring");
-        assert_eq!(tuner_update_config(handle, updated.as_ptr()), ErrorCode::Ok as i32);
+        assert_eq!(
+            tuner_update_config(handle, updated.as_ptr()),
+            ErrorCode::Ok as i32
+        );
 
         let adjusted = tuner_process_frame(handle, frame.as_ptr(), frame.len(), 48_000);
         assert_eq!(adjusted.error_code, ErrorCode::Ok as i32);
@@ -335,6 +575,62 @@ mod tests {
         assert_eq!(tuner_dispose(handle), ErrorCode::Ok as i32);
     }
 
+    #[test]
+    fn parser_accepts_partial_json_with_defaults() {
+        let config =
+            parse_engine_config(r#"{"instrumentPreset":"guitar_standard"}"#).expect("valid config");
+        assert_eq!(config.instrument_preset, "guitar_standard");
+        assert_eq!(config.a4_hz, 440.0);
+        assert_eq!(config.noise_gate_db, -60.0);
+        assert_eq!(config.smoothing, 0.2);
+    }
+
+    #[test]
+    fn parser_ignores_unknown_fields() {
+        let config = parse_engine_config(
+            r#"{"a4Hz":441.0,"instrumentPreset":"chromatic","noiseGateDb":-55.0,"smoothing":0.3,"extra":{"x":[1,2,3]}}"#,
+        )
+        .expect("valid config");
+        assert_eq!(config.a4_hz, 441.0);
+        assert_eq!(config.instrument_preset, "chromatic");
+        assert_eq!(config.noise_gate_db, -55.0);
+        assert_eq!(config.smoothing, 0.3);
+    }
+
+    #[test]
+    fn parser_rejects_wrong_value_type() {
+        let error = parse_engine_config(r#"{"smoothing":"0.2"}"#).expect_err("must fail");
+        assert_eq!(error, ErrorCode::InvalidJson);
+    }
+
+    #[test]
+    fn guitar_preset_resolves_harmonic_rich_g3_as_g3() {
+        let config = CString::new(
+            r#"{"a4Hz":440.0,"instrumentPreset":"guitar_standard","noiseGateDb":-60.0,"smoothing":0.2}"#,
+        )
+        .expect("valid cstring");
+        let handle = tuner_init(config.as_ptr());
+        assert_ne!(handle, 0);
+
+        let frame = harmonic_wave(
+            196.0,
+            48_000,
+            4096,
+            &[(1.0, 0.18), (2.0, 0.63), (3.0, 0.30), (4.0, 0.18)],
+        );
+
+        let mut result = PitchResult::err(ErrorCode::InternalError);
+        for _ in 0..4 {
+            result = tuner_process_frame(handle, frame.as_ptr(), frame.len(), 48_000);
+            assert_eq!(result.error_code, ErrorCode::Ok as i32);
+        }
+
+        assert_eq!(note_from_result(result), "G3");
+        assert!(result.cents.abs() < 20.0, "cents drift: {}", result.cents);
+
+        assert_eq!(tuner_dispose(handle), ErrorCode::Ok as i32);
+    }
+
     fn note_from_result(result: PitchResult) -> String {
         let len = result.note_len as usize;
         String::from_utf8_lossy(&result.note[..len]).to_string()
@@ -345,6 +641,26 @@ mod tests {
             .map(|i| {
                 let phase = 2.0 * PI * frequency_hz * i as f32 / sample_rate as f32;
                 phase.sin() * 0.6
+            })
+            .collect()
+    }
+
+    fn harmonic_wave(
+        fundamental_hz: f32,
+        sample_rate: u32,
+        len: usize,
+        harmonics: &[(f32, f32)],
+    ) -> Vec<f32> {
+        (0..len)
+            .map(|i| {
+                harmonics
+                    .iter()
+                    .map(|(multiple, amplitude)| {
+                        let phase =
+                            2.0 * PI * (fundamental_hz * *multiple) * i as f32 / sample_rate as f32;
+                        phase.sin() * *amplitude
+                    })
+                    .sum::<f32>()
             })
             .collect()
     }

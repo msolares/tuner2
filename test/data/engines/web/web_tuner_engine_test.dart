@@ -129,6 +129,43 @@ void main() {
 
       await engine.stop();
     });
+
+    test('detecta cambio real de nota sin retardo innecesario', () async {
+      final frameSource = _FakeAudioFrameSource();
+      final detector = _FakePitchDetector(
+        outputs: const [
+          PitchSample(
+            hz: 82.41,
+            note: 'E2',
+            cents: 3.0,
+            confidence: 0.95,
+            timestampMs: 100,
+          ),
+          PitchSample(
+            hz: 110.0,
+            note: 'A2',
+            cents: 1.0,
+            confidence: 0.92,
+            timestampMs: 220,
+          ),
+        ],
+      );
+      final engine = WebTunerEngine(
+        frameSource: frameSource,
+        detector: detector,
+      );
+
+      final future = engine.samples().take(2).toList();
+      await engine.start(TunerSettings.defaults.copyWith(instrumentPreset: 'guitar_standard'));
+      frameSource.emit(_frame(timestampMs: 100));
+      frameSource.emit(_frame(timestampMs: 220));
+      final samples = await future;
+
+      expect(samples.first.note, 'E2');
+      expect(samples.last.note, 'A2');
+
+      await engine.stop();
+    });
   });
 }
 

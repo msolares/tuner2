@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/pitch_sample.dart';
+import '../../domain/entities/song_tuning_result.dart';
 import '../../domain/entities/instrument_preset_profile.dart';
 import '../../domain/entities/tuner_settings.dart';
+import '../bloc/song_tuning_bloc.dart';
+import '../bloc/song_tuning_event.dart';
+import '../bloc/song_tuning_state.dart';
 import '../bloc/tuner_bloc.dart';
 import '../bloc/tuner_event.dart';
 import '../bloc/tuner_state.dart';
@@ -89,6 +93,8 @@ class TunerScreen extends StatelessWidget {
                       ],
                       const SizedBox(height: 14),
                       _SettingsPanel(state: state),
+                      const SizedBox(height: 14),
+                      const _SongTuningPanel(),
                     ],
                   ),
                   Positioned(
@@ -668,6 +674,145 @@ class _BottomNavItem extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SongTuningPanel extends StatelessWidget {
+  const _SongTuningPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SongTuningBloc, SongTuningState>(
+      builder: (context, state) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0x80142637),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF1F364C)),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Song Tuning',
+                style: TextStyle(color: Color(0xFFD2DFEC), fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                onChanged: (value) => context.read<SongTuningBloc>().add(SongNameChanged(value)),
+                style: const TextStyle(color: Color(0xFFEAF2FA)),
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de cancion',
+                  hintText: 'Ej: Everlong',
+                  labelStyle: TextStyle(color: Color(0xFFD2DFEC)),
+                  hintStyle: TextStyle(color: Color(0xFF88A2B8)),
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF2A445C)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF3FA8FF), width: 1.4),
+                  ),
+                  filled: true,
+                  fillColor: Color(0x66132436),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: state.canSubmit
+                      ? () => context.read<SongTuningBloc>().add(const SongTuningSubmitted())
+                      : null,
+                  child: state.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Consultar afinacion'),
+                ),
+              ),
+              if (state.status == SongTuningStatus.success && state.result != null) ...[
+                const SizedBox(height: 10),
+                _SongTuningResultCard(result: state.result!),
+              ],
+              if (state.status == SongTuningStatus.error && state.errorMessage != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0x33FF5C5C),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0x88FF8080)),
+                  ),
+                  child: Text(
+                    state.errorMessage!,
+                    style: const TextStyle(color: Color(0xFFFFB4B4), fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SongTuningResultCard extends StatelessWidget {
+  const _SongTuningResultCard({required this.result});
+
+  final SongTuningResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0x3319D39C),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0x8819D39C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Afinacion recomendada',
+            style: TextStyle(
+              color: Color(0xFFBDEEDB),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${result.primaryTuning.displayName}: ${result.primaryTuning.stringsLowToHigh.join(' ')}',
+            style: const TextStyle(color: Color(0xFFDDF7EA), fontWeight: FontWeight.w600),
+          ),
+          if (result.hasAlternatives) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Alternativas',
+              style: TextStyle(
+                color: Color(0xFFBDEEDB),
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...result.alternativeTunings.map<Widget>(
+              (alternative) => Text(
+                '${alternative.displayName}: ${alternative.stringsLowToHigh.join(' ')}',
+                style: const TextStyle(color: Color(0xFFDDF7EA), fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
         ],
       ),
     );

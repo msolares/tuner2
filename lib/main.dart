@@ -7,10 +7,14 @@ import 'data/engines/mobile/mobile_ffi_tuner_engine.dart';
 import 'data/engines/web/web_tuner_engine.dart';
 import 'data/permissions/noop_audio_permission_service.dart';
 import 'data/permissions/permission_handler_audio_permission_service.dart';
+import 'data/song_tuning/openai_song_tuning_config.dart';
+import 'data/song_tuning/openai_song_tuning_service.dart';
 import 'data/settings/default_instrument_preset_catalog.dart';
 import 'data/settings/shared_preferences_a4_calibration_store.dart';
 import 'domain/services/audio_permission_service.dart';
+import 'domain/services/song_tuning_service.dart';
 import 'domain/services/tuner_engine.dart';
+import 'presentation/bloc/song_tuning_bloc.dart';
 import 'presentation/bloc/tuner_bloc.dart';
 import 'presentation/screens/tuner_screen.dart';
 
@@ -25,23 +29,37 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final engine = _buildTunerEngine();
     final audioPermissionService = _buildAudioPermissionService();
+    final songTuningService = _buildSongTuningService();
     return MaterialApp(
       title: 'Afinador MVP',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: BlocProvider(
-        create: (_) => TunerBloc(
-          engine: engine,
-          audioPermissionService: audioPermissionService,
-          a4CalibrationStore: SharedPreferencesA4CalibrationStore(),
-          instrumentPresetCatalog: const DefaultInstrumentPresetCatalog(),
-        ),
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => TunerBloc(
+              engine: engine,
+              audioPermissionService: audioPermissionService,
+              a4CalibrationStore: SharedPreferencesA4CalibrationStore(),
+              instrumentPresetCatalog: const DefaultInstrumentPresetCatalog(),
+            ),
+          ),
+          BlocProvider(
+            create: (_) => SongTuningBloc(songTuningService: songTuningService),
+          ),
+        ],
         child: const TunerScreen(),
       ),
     );
   }
+}
+
+SongTuningService _buildSongTuningService() {
+  return OpenAiSongTuningService(
+    config: OpenAiSongTuningConfig.fromDartDefine(),
+  );
 }
 
 TunerEngine _buildTunerEngine() {

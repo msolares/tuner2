@@ -8,6 +8,7 @@ import '../../audio/audio_frame_source.dart';
 import '../../audio/audio_capture_profile.dart';
 import '../../audio/recorder_audio_frame_source.dart';
 import '../common/pitch_range.dart';
+import '../common/pitch_stabilization_profile.dart';
 import '../common/pitch_stabilizer.dart';
 import '../common/simple_pitch_detector.dart';
 
@@ -58,10 +59,12 @@ class WebTunerEngine implements TunerEngine {
           maxFrequencyHz: range.maxHz,
         );
         if (sample != null) {
+          final profile = stabilizationProfileForPreset(_settings.instrumentPreset);
           final stabilized = _stabilizer.stabilize(
             sample: sample,
             range: range,
             smoothing: _settings.smoothing,
+            profile: profile,
           );
           if (_shouldEmit(stabilized.timestampMs)) {
             _controller.add(stabilized);

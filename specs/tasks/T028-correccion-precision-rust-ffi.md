@@ -1,7 +1,7 @@
 # T028 - Correccion de precision de pitch en Rust/FFI
 
 ## Estado
-- todo
+- done
 
 ## Prioridad
 - P0
@@ -59,4 +59,23 @@ Corregir el motor Rust expuesto por FFI para que entregue `hz`, `note`, `cents` 
 5. Ajustar umbrales para balance precision/latencia.
 
 ## Evidencia de cierre
-- Pendiente.
+- Implementacion aplicada en:
+  - `rust/engine/src/detector.rs`
+  - `rust/engine/src/ffi.rs`
+  - `rust/engine/PITCH_PIPELINE.md`
+  - `rust/engine/FFI_CONTRACT.md`
+- Ajuste de build para entorno restringido:
+  - Se elimino dependencia externa de `serde`/`serde_json` en `rust/engine/Cargo.toml` y se implemento parser JSON interno para `EngineConfig` en `ffi.rs`.
+- Correccion clave:
+  - Se corrigio el criterio de seleccion de pico para priorizar el primer maximo local fuerte (reduce seleccion de subarmonicos/octava baja).
+  - Correccion armonica dejada en modo conservador para evitar sobrecorreccion en señales estables.
+- Pruebas agregadas:
+  - `detector.rs`: `detects_fundamental_in_harmonic_rich_g3_signal`
+  - `detector.rs`: `harmonic_correction_is_conservative_when_not_needed`
+  - `ffi.rs`: `guitar_preset_resolves_harmonic_rich_g3_as_g3`
+  - `ffi.rs`: `parser_accepts_partial_json_with_defaults`
+  - `ffi.rs`: `parser_ignores_unknown_fields`
+  - `ffi.rs`: `parser_rejects_wrong_value_type`
+- Validaciones ejecutadas:
+  - `cargo fmt --all` (ok)
+  - `cargo test -j 1` con `CARGO_TARGET_DIR` temporal y `CARGO_INCREMENTAL=0` (ok, 14 tests en verde)

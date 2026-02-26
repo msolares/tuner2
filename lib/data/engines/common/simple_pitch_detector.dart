@@ -23,7 +23,14 @@ class SimplePitchDetector {
       return _silenceSample(timestampMs);
     }
 
-    final autocorrelation = _autocorrelate(pcm, sampleRateHz);
+    final minHz = (minFrequencyHz ?? 50.0).clamp(20.0, 4000.0).toDouble();
+    final maxHz = (maxFrequencyHz ?? 1200.0).clamp(minHz + 1.0, 4000.0).toDouble();
+    final autocorrelation = _autocorrelate(
+      pcm,
+      sampleRateHz,
+      minFrequencyHz: minHz,
+      maxFrequencyHz: maxHz,
+    );
     final frequency = autocorrelation.frequencyHz;
     if (frequency <= 0) {
       return _silenceSample(timestampMs);
@@ -87,7 +94,12 @@ class SimplePitchDetector {
     return 20 * (log(clamped) / log(10));
   }
 
-  _AutocorrelationResult _autocorrelate(Float32List samples, int sampleRateHz) {
+  _AutocorrelationResult _autocorrelate(
+    Float32List samples,
+    int sampleRateHz, {
+    required double minFrequencyHz,
+    required double maxFrequencyHz,
+  }) {
     final size = samples.length;
     if (size < 32) {
       return const _AutocorrelationResult(0.0, 0.0);
@@ -98,8 +110,8 @@ class SimplePitchDetector {
       centered[i] = samples[i] - mean;
     }
 
-    final minLag = (sampleRateHz / 1200).floor().clamp(1, size - 3);
-    final maxLag = (sampleRateHz / 50).ceil().clamp(minLag + 1, size - 2);
+    final minLag = (sampleRateHz / maxFrequencyHz).floor().clamp(1, size - 3);
+    final maxLag = (sampleRateHz / minFrequencyHz).ceil().clamp(minLag + 1, size - 2);
     final correlations = List<double>.filled(maxLag - minLag + 1, 0.0);
 
     for (var lag = minLag; lag <= maxLag; lag++) {
@@ -121,49 +133,20 @@ class SimplePitchDetector {
       correlations[lag - minLag] = correlation;
     }
 
-    var bestIndex = -1;
-    var bestCorrelation = -1.0;
-    for (var i = 1; i < correlations.length - 1; i++) {
-      final current = correlations[i];
-      final isLocalPeak = current > correlations[i - 1] && current >= correlations[i + 1];
-      if (isLocalPeak && current > bestCorrelation) {
-        bestCorrelation = current;
-        bestIndex = i;
-      }
-    }
-    if (bestIndex < 0) {
-      for (var i = 0; i < correlations.length; i++) {
-        if (correlations[i] > bestCorrelation) {
-          bestCorrelation = correlations[i];
-          bestIndex = i;
-        }
-      }
-    }
+    final peak = _selectPeak(correlations);
+    var bestIndex = peak.index;
+    final bestCorrelation = peak.correlation;
 
     if (bestIndex < 0 || bestCorrelation < 0.10) {
       return const _AutocorrelationResult(0.0, 0.0);
     }
 
-    var correctedIndex = bestIndex;
-    final baseLag = minLag + bestIndex;
-    for (var factor = 2; factor <= 8; factor++) {
-      final candidateLag = baseLag * factor;
-      if (candidateLag > maxLag) {
-        break;
-      }
-      final index = candidateLag - minLag;
-      final candidateCorrelation = correlations[index];
-      if (candidateCorrelation >= bestCorrelation * 0.82) {
-        correctedIndex = index;
-      }
-    }
-
-    final correctedLag = minLag + correctedIndex;
-    var refinedLag = correctedLag.toDouble();
-    if (correctedIndex > 0 && correctedIndex + 1 < correlations.length) {
-      final y1 = correlations[correctedIndex - 1];
-      final y2 = correlations[correctedIndex];
-      final y3 = correlations[correctedIndex + 1];
+    final lag = minLag + bestIndex;
+    var refinedLag = lag.toDouble();
+    if (bestIndex > 0 && bestIndex + 1 < correlations.length) {
+      final y1 = correlations[bestIndex - 1];
+      final y2 = correlations[bestIndex];
+      final y3 = correlations[bestIndex + 1];
       final denominator = (y1 - 2 * y2 + y3);
       if (denominator.abs() > 1e-6) {
         final delta = (0.5 * (y1 - y3) / denominator).clamp(-0.5, 0.5);
@@ -172,6 +155,43 @@ class SimplePitchDetector {
     }
 
     return _AutocorrelationResult(sampleRateHz / refinedLag, bestCorrelation.clamp(0.0, 1.0));
+  }
+
+  _PeakResult _selectPeak(List<double> correlations) {
+    if (correlations.isEmpty) {
+      return const _PeakResult(index: -1, correlation: 0.0);
+    }
+    if (correlations.length < 3) {
+      var bestIndex = 0;
+      var bestValue = correlations.first;
+      for (var i = 1; i < correlations.length; i++) {
+        if (correlations[i] > bestValue) {
+          bestValue = correlations[i];
+          bestIndex = i;
+        }
+      }
+      return _PeakResult(index: bestIndex, correlation: bestValue);
+    }
+
+    var globalIndex = 0;
+    var globalValue = correlations.first;
+    for (var i = 1; i < correlations.length; i++) {
+      if (correlations[i] > globalValue) {
+        globalValue = correlations[i];
+        globalIndex = i;
+      }
+    }
+
+    final strongPeakThreshold = (globalValue * 0.65).clamp(0.12, 0.98);
+    for (var i = 1; i < correlations.length - 1; i++) {
+      final current = correlations[i];
+      final isLocalPeak = current > correlations[i - 1] && current >= correlations[i + 1];
+      if (isLocalPeak && current >= strongPeakThreshold) {
+        return _PeakResult(index: i, correlation: current);
+      }
+    }
+
+    return _PeakResult(index: globalIndex, correlation: globalValue);
   }
 
   String _midiToNote(int midi) {
@@ -187,4 +207,14 @@ class _AutocorrelationResult {
 
   final double frequencyHz;
   final double normalizedCorrelation;
+}
+
+class _PeakResult {
+  const _PeakResult({
+    required this.index,
+    required this.correlation,
+  });
+
+  final int index;
+  final double correlation;
 }

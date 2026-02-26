@@ -5,6 +5,14 @@ Responsabilidad:
 - Contratos publicos.
 - Casos de uso.
 
+Contratos vigentes adicionales:
+- Song tuning por cancion:
+  - `SongTuningQuery`
+  - `GuitarTuning`
+  - `SongTuningResult`
+  - `SongTuningService`
+  - `SongTuningLookupException` con recoverability explicita
+
 Puede importar:
 - Otras unidades de `lib/domain/**`.
 - paquetes Dart puros sin infraestructura.

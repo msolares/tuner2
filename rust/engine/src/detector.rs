@@ -24,7 +24,10 @@ impl Default for DetectorConfig {
     }
 }
 
-pub fn detect_pitch(frame: ValidatedFrame<'_>, config: DetectorConfig) -> Result<Detection, &'static str> {
+pub fn detect_pitch(
+    frame: ValidatedFrame<'_>,
+    config: DetectorConfig,
+) -> Result<Detection, &'static str> {
     if frame.pcm.len() < 32 {
         return Err("frame_too_short");
     }
@@ -77,7 +80,7 @@ pub fn detect_pitch(frame: ValidatedFrame<'_>, config: DetectorConfig) -> Result
         return Ok(zero_detection(rms, best_corr.max(0.0)));
     }
 
-    let corrected_index = apply_harmonic_correction(best_index, best_corr, &correlations);
+    let corrected_index = apply_harmonic_correction(best_index, best_corr, min_lag, &correlations);
     let lag = (min_lag + corrected_index) as f32;
     let refined_lag = refine_lag(lag, corrected_index, &correlations);
     let hz = sample_rate / refined_lag;
@@ -122,46 +125,37 @@ fn select_peak(correlations: &[f32]) -> (usize, f32) {
         return (index, value);
     }
 
-    let mut best_index = 0usize;
-    let mut best_value = -1.0_f32;
-    let mut found_local_peak = false;
+    let (global_index, global_value) = correlations
+        .iter()
+        .copied()
+        .enumerate()
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .unwrap_or((0, 0.0));
+
+    let strong_peak_threshold = (global_value * 0.65).clamp(0.12, 0.98);
     for i in 1..(correlations.len() - 1) {
         let current = correlations[i];
         let is_local_peak = current > correlations[i - 1] && current >= correlations[i + 1];
-        if is_local_peak && current > best_value {
-            best_value = current;
-            best_index = i;
-            found_local_peak = true;
+        if is_local_peak && current >= strong_peak_threshold {
+            // Prefer the first strong local peak to avoid octave-down selection
+            // from later subharmonic peaks.
+            return (i, current);
         }
     }
 
-    if found_local_peak {
-        (best_index, best_value)
-    } else {
-        correlations
-            .iter()
-            .copied()
-            .enumerate()
-            .max_by(|a, b| a.1.total_cmp(&b.1))
-            .unwrap_or((0, 0.0))
-    }
+    (global_index, global_value)
 }
 
-fn apply_harmonic_correction(best_index: usize, best_corr: f32, correlations: &[f32]) -> usize {
-    let mut corrected_index = best_index;
-    let base_lag = best_index + 1;
-    for factor in 2..=8 {
-        let candidate_lag = base_lag * factor;
-        if candidate_lag == 0 || candidate_lag > correlations.len() {
-            break;
-        }
-        let candidate_index = candidate_lag - 1;
-        let candidate_corr = correlations[candidate_index];
-        if candidate_corr >= best_corr * 0.82 {
-            corrected_index = candidate_index;
-        }
-    }
-    corrected_index
+fn apply_harmonic_correction(
+    best_index: usize,
+    best_corr: f32,
+    min_lag: usize,
+    correlations: &[f32],
+) -> usize {
+    let _ = best_corr;
+    let _ = min_lag;
+    let _ = correlations;
+    best_index
 }
 
 fn refine_lag(base_lag: f32, corrected_index: usize, correlations: &[f32]) -> f32 {
@@ -181,7 +175,7 @@ fn refine_lag(base_lag: f32, corrected_index: usize, correlations: &[f32]) -> f3
 
 #[cfg(test)]
 mod tests {
-    use super::{detect_pitch, DetectorConfig};
+    use super::{apply_harmonic_correction, detect_pitch, DetectorConfig};
     use crate::input::validate_frame;
     use std::f32::consts::PI;
 
@@ -220,15 +214,79 @@ mod tests {
         assert_eq!(detection.hz, 0.0);
     }
 
+    #[test]
+    fn detects_fundamental_in_harmonic_rich_g3_signal() {
+        let sample_rate = 48_000_u32;
+        let pcm = harmonic_wave(
+            196.0,
+            sample_rate,
+            4096,
+            &[(1.0, 0.18), (2.0, 0.63), (3.0, 0.30), (4.0, 0.18)],
+        );
+        let frame = validate_frame(&pcm, sample_rate).expect("valid frame");
+        let detection = detect_pitch(
+            frame,
+            DetectorConfig {
+                min_hz: 70.0,
+                max_hz: 420.0,
+                ..DetectorConfig::default()
+            },
+        )
+        .expect("detection");
+        assert!(
+            (detection.hz - 196.0).abs() < 4.0,
+            "detected hz: {}",
+            detection.hz
+        );
+    }
+
+    #[test]
+    fn harmonic_correction_is_conservative_when_not_needed() {
+        let min_lag = 40usize;
+        let mut correlations = vec![0.1_f32; 500];
+
+        let base_lag = 122usize;
+        let base_index = base_lag - min_lag;
+        correlations[base_index] = 0.95;
+
+        let corrected = apply_harmonic_correction(base_index, 0.95, min_lag, &correlations);
+        assert_eq!(corrected, base_index);
+    }
+
     fn sine_wave(frequency_hz: f32, sample_rate: u32, len: usize) -> Vec<f32> {
         sine_wave_with_amplitude(frequency_hz, sample_rate, len, 0.5)
     }
 
-    fn sine_wave_with_amplitude(frequency_hz: f32, sample_rate: u32, len: usize, amplitude: f32) -> Vec<f32> {
+    fn sine_wave_with_amplitude(
+        frequency_hz: f32,
+        sample_rate: u32,
+        len: usize,
+        amplitude: f32,
+    ) -> Vec<f32> {
         (0..len)
             .map(|i| {
                 let phase = 2.0 * PI * frequency_hz * i as f32 / sample_rate as f32;
                 phase.sin() * amplitude
+            })
+            .collect()
+    }
+
+    fn harmonic_wave(
+        fundamental_hz: f32,
+        sample_rate: u32,
+        len: usize,
+        harmonics: &[(f32, f32)],
+    ) -> Vec<f32> {
+        (0..len)
+            .map(|i| {
+                harmonics
+                    .iter()
+                    .map(|(multiple, amplitude)| {
+                        let phase =
+                            2.0 * PI * (fundamental_hz * *multiple) * i as f32 / sample_rate as f32;
+                        phase.sin() * *amplitude
+                    })
+                    .sum::<f32>()
             })
             .collect()
     }

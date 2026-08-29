@@ -4,7 +4,10 @@ pub struct ValidatedFrame<'a> {
     pub sample_rate: u32,
 }
 
-pub fn validate_frame<'a>(pcm: &'a [f32], sample_rate: u32) -> Result<ValidatedFrame<'a>, &'static str> {
+pub fn validate_frame<'a>(
+    pcm: &'a [f32],
+    sample_rate: u32,
+) -> Result<ValidatedFrame<'a>, &'static str> {
     if pcm.is_empty() {
         return Err("invalid_frame");
     }

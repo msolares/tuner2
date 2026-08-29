@@ -55,4 +55,3 @@ class GuitarTuning {
     return 'GuitarTuning(id: $id, displayName: $displayName, stringsLowToHigh: $stringsLowToHigh, description: $description)';
   }
 }
-

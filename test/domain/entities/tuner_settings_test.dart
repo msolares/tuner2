@@ -5,13 +5,13 @@ void main() {
   group('TunerSettings', () {
     test('expone defaults esperados para MVP', () {
       expect(TunerSettings.defaults.a4Hz, 440.0);
-      expect(TunerSettings.defaults.instrumentPreset, 'chromatic');
+      expect(TunerSettings.defaults.instrumentPreset, 'guitar_standard');
       expect(TunerSettings.defaults.noiseGateDb, -60.0);
-      expect(TunerSettings.defaults.smoothing, 0.2);
+      expect(TunerSettings.defaults.smoothing, 0.24);
     });
 
     test('copyWith actualiza solo los campos indicados', () {
-      final initial = TunerSettings.defaults;
+      const initial = TunerSettings.defaults;
       final updated = initial.copyWith(
         a4Hz: 442.0,
         instrumentPreset: 'guitar_standard',

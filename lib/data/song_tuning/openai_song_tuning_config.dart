@@ -1,7 +1,6 @@
-import 'dart:async';
-
 class OpenAiSongTuningConfig {
-  static final Uri defaultEndpoint = Uri.parse('https://api.openai.com/v1/chat/completions');
+  static final Uri defaultEndpoint =
+      Uri.parse('https://api.openai.com/v1/chat/completions');
 
   OpenAiSongTuningConfig({
     required this.apiKey,

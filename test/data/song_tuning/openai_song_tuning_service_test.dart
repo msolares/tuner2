@@ -156,6 +156,44 @@ void main() {
         ),
       );
     });
+
+    test('corrige November Rain a Eb Standard cuando modelo devuelve Standard E', () async {
+      final client = MockClient((_) async {
+        final body = jsonEncode(<String, dynamic>{
+          'choices': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'message': <String, dynamic>{
+                'content': jsonEncode(<String, dynamic>{
+                  'status': 'ok',
+                  'primary': <String, dynamic>{
+                    'id': 'standard_e',
+                    'display_name': 'Standard E',
+                    'strings': ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+                  },
+                  'alternatives': <Map<String, dynamic>>[
+                    <String, dynamic>{
+                      'id': 'drop_d',
+                      'display_name': 'Drop D',
+                      'strings': ['D2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        });
+        return http.Response(body, 200);
+      });
+      final service = _buildService(client);
+
+      final result = await service.resolve(const SongTuningQuery(songName: 'November Rain'));
+
+      expect(result.primaryTuning.id, 'standard_eb');
+      expect(result.primaryTuning.displayName, 'Eb Standard');
+      expect(result.primaryTuning.stringsLowToHigh, ['Eb2', 'Ab2', 'Db3', 'Gb3', 'Bb3', 'Eb4']);
+      expect(result.alternativeTunings.map((t) => t.id), contains('standard_e'));
+      expect(result.alternativeTunings.map((t) => t.id), contains('drop_d'));
+    });
   });
 }
 

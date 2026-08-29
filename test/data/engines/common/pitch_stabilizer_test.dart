@@ -11,21 +11,32 @@ void main() {
       const range = PitchRange(minHz: 50, maxHz: 2000);
 
       final first = stabilizer.stabilize(
-        sample: _sample(note: 'A4', hz: 440, cents: 2, confidence: 0.92, timestampMs: 100),
+        sample: _sample(
+            note: 'A4', hz: 440, cents: 2, confidence: 0.92, timestampMs: 100),
         range: range,
         smoothing: 0.2,
       );
       expect(first.note, 'A4');
 
       final transient = stabilizer.stabilize(
-        sample: _sample(note: 'B4', hz: 493.88, cents: 3, confidence: 0.80, timestampMs: 220),
+        sample: _sample(
+            note: 'B4',
+            hz: 493.88,
+            cents: 3,
+            confidence: 0.80,
+            timestampMs: 220),
         range: range,
         smoothing: 0.2,
       );
       expect(transient.note, 'A4');
 
       final confirmed = stabilizer.stabilize(
-        sample: _sample(note: 'B4', hz: 493.88, cents: 1, confidence: 0.80, timestampMs: 340),
+        sample: _sample(
+            note: 'B4',
+            hz: 493.88,
+            cents: 1,
+            confidence: 0.80,
+            timestampMs: 340),
         range: range,
         smoothing: 0.2,
       );
@@ -37,12 +48,18 @@ void main() {
       const range = PitchRange(minHz: 50, maxHz: 2000);
 
       final stable = stabilizer.stabilize(
-        sample: _sample(note: 'E4', hz: 329.63, cents: 0.5, confidence: 0.90, timestampMs: 100),
+        sample: _sample(
+            note: 'E4',
+            hz: 329.63,
+            cents: 0.5,
+            confidence: 0.90,
+            timestampMs: 100),
         range: range,
         smoothing: 0.2,
       );
       final held = stabilizer.stabilize(
-        sample: _sample(note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 220),
+        sample: _sample(
+            note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 220),
         range: range,
         smoothing: 0.2,
       );
@@ -57,22 +74,30 @@ void main() {
       const range = PitchRange(minHz: 50, maxHz: 2000);
 
       stabilizer.stabilize(
-        sample: _sample(note: 'D4', hz: 293.66, cents: 0.0, confidence: 0.92, timestampMs: 100),
+        sample: _sample(
+            note: 'D4',
+            hz: 293.66,
+            cents: 0.0,
+            confidence: 0.92,
+            timestampMs: 100),
         range: range,
         smoothing: 0.2,
       );
       stabilizer.stabilize(
-        sample: _sample(note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 220),
+        sample: _sample(
+            note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 220),
         range: range,
         smoothing: 0.2,
       );
       stabilizer.stabilize(
-        sample: _sample(note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 340),
+        sample: _sample(
+            note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 340),
         range: range,
         smoothing: 0.2,
       );
       final released = stabilizer.stabilize(
-        sample: _sample(note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 460),
+        sample: _sample(
+            note: '--', hz: 0.0, cents: 0.0, confidence: 0.1, timestampMs: 460),
         range: range,
         smoothing: 0.2,
       );
@@ -87,7 +112,12 @@ void main() {
       const guitarRange = PitchRange(minHz: 70, maxHz: 420);
 
       final outOfRange = stabilizer.stabilize(
-        sample: _sample(note: 'A5', hz: 880.0, cents: 0.0, confidence: 0.95, timestampMs: 100),
+        sample: _sample(
+            note: 'A5',
+            hz: 880.0,
+            cents: 0.0,
+            confidence: 0.95,
+            timestampMs: 100),
         range: guitarRange,
         smoothing: 0.2,
       );
@@ -97,7 +127,9 @@ void main() {
       expect(outOfRange.confidence, 0.0);
     });
 
-    test('mantiene nota previa si candidata nueva queda cerca del borde de cents', () {
+    test(
+        'mantiene nota previa si candidata nueva queda cerca del borde de cents',
+        () {
       final stabilizer = PitchStabilizer(noteConfirmationFrames: 1);
       const range = PitchRange(minHz: 50, maxHz: 2000);
       const profile = PitchStabilizationProfile(
@@ -112,13 +144,19 @@ void main() {
       );
 
       final stable = stabilizer.stabilize(
-        sample: _sample(note: 'A4', hz: 440, cents: 20, confidence: 0.92, timestampMs: 100),
+        sample: _sample(
+            note: 'A4', hz: 440, cents: 20, confidence: 0.92, timestampMs: 100),
         range: range,
         smoothing: 0.2,
         profile: profile,
       );
       final nearBoundary = stabilizer.stabilize(
-        sample: _sample(note: 'A#4', hz: 466.16, cents: -46, confidence: 0.82, timestampMs: 220),
+        sample: _sample(
+            note: 'A#4',
+            hz: 466.16,
+            cents: -46,
+            confidence: 0.82,
+            timestampMs: 220),
         range: range,
         smoothing: 0.2,
         profile: profile,
@@ -128,7 +166,7 @@ void main() {
       expect(nearBoundary.note, 'A4');
     });
 
-    test('acelera respuesta en salto grande de cents para cambio real', () {
+    test('mantiene la muestra completa mientras confirma cambio de nota', () {
       final stabilizer = PitchStabilizer();
       const range = PitchRange(minHz: 50, maxHz: 2000);
       const slowProfile = PitchStabilizationProfile(
@@ -143,20 +181,60 @@ void main() {
       );
 
       final baseline = stabilizer.stabilize(
-        sample: _sample(note: 'A4', hz: 440, cents: 1, confidence: 0.92, timestampMs: 100),
+        sample: _sample(
+            note: 'A4', hz: 440, cents: 1, confidence: 0.92, timestampMs: 100),
         range: range,
         smoothing: 0.8,
         profile: slowProfile,
       );
       final jumped = stabilizer.stabilize(
-        sample: _sample(note: 'E5', hz: 659.25, cents: 1, confidence: 0.92, timestampMs: 220),
+        sample: _sample(
+            note: 'E5',
+            hz: 659.25,
+            cents: 1,
+            confidence: 0.92,
+            timestampMs: 220),
         range: range,
         smoothing: 0.8,
         profile: slowProfile,
       );
 
       expect(baseline.hz, closeTo(440, 0.01));
-      expect(jumped.hz, closeTo(527.7, 0.5));
+      expect(jumped.note, 'A4');
+      expect(jumped.hz, closeTo(440, 0.01));
+      expect(jumped.cents, closeTo(1.0, 0.01));
+    });
+
+    test('no mezcla hz ni cents cuando confirma una nota nueva', () {
+      final stabilizer = PitchStabilizer(noteConfirmationFrames: 1);
+      const range = PitchRange(minHz: 50, maxHz: 2000);
+
+      stabilizer.stabilize(
+        sample: _sample(
+          note: 'A1',
+          hz: 55.0,
+          cents: 0.0,
+          confidence: 0.75,
+          timestampMs: 100,
+        ),
+        range: range,
+        smoothing: 0.2,
+      );
+      final switched = stabilizer.stabilize(
+        sample: _sample(
+          note: 'E2',
+          hz: 82.41,
+          cents: 1.5,
+          confidence: 0.80,
+          timestampMs: 220,
+        ),
+        range: range,
+        smoothing: 0.2,
+      );
+
+      expect(switched.note, 'E2');
+      expect(switched.hz, closeTo(82.41, 0.001));
+      expect(switched.cents, closeTo(1.5, 0.001));
     });
   });
 }

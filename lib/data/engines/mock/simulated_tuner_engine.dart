@@ -6,7 +6,8 @@ import '../../../domain/entities/tuner_settings.dart';
 import '../../../domain/services/tuner_engine.dart';
 
 class SimulatedTunerEngine implements TunerEngine {
-  StreamController<PitchSample> _controller = StreamController<PitchSample>.broadcast();
+  StreamController<PitchSample> _controller =
+      StreamController<PitchSample>.broadcast();
   Timer? _timer;
   int _tick = 0;
   TunerSettings _settings = TunerSettings.defaults;

@@ -5,6 +5,7 @@ Este directorio es la fuente de verdad para alcance, arquitectura y ejecución.
 ## Estado actual
 - Arquitectura objetivo: Flutter + Rust FFI.
 - MVP: afinación en tiempo real + calibración A4.
+- Expansión planificada: metrónomo configurable como segundo modo (`E07`).
 - Plataformas objetivo: Android, iOS y Web.
 - Idioma oficial de documentación: español.
 

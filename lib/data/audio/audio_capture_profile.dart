@@ -35,14 +35,16 @@ const Map<AudioCapturePlatform, AudioCaptureProfile> kAudioCaptureProfiles = {
     bufferSizeFrames: 1024,
     channels: 1,
     pcmFloat32: true,
-    restrictions: 'Sesion AVAudio en modo medicion; puede ajustar buffer por latencia del dispositivo.',
+    restrictions:
+        'Sesion AVAudio en modo medicion; puede ajustar buffer por latencia del dispositivo.',
   ),
   AudioCapturePlatform.web: AudioCaptureProfile(
     sampleRateHz: 48000,
     bufferSizeFrames: 2048,
     channels: 1,
     pcmFloat32: true,
-    restrictions: 'Sample rate final lo decide el navegador; requiere gesto de usuario para iniciar microfono.',
+    restrictions:
+        'Sample rate final lo decide el navegador; requiere gesto de usuario para iniciar microfono.',
   ),
 };
 
@@ -56,7 +58,8 @@ AudioCapturePlatform currentAudioCapturePlatform() {
     case TargetPlatform.iOS:
       return AudioCapturePlatform.ios;
     default:
-      throw UnsupportedError('Plataforma no soportada para captura de audio MVP.');
+      throw UnsupportedError(
+          'Plataforma no soportada para captura de audio MVP.');
   }
 }
 

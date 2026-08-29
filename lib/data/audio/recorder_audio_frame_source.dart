@@ -16,7 +16,8 @@ class RecorderAudioFrameSource implements AudioFrameSource {
 
   final AudioRecorder _recorder;
   final AudioCaptureProfile _profile;
-  final StreamController<AudioPcmFrame> _controller = StreamController<AudioPcmFrame>.broadcast();
+  final StreamController<AudioPcmFrame> _controller =
+      StreamController<AudioPcmFrame>.broadcast();
   StreamSubscription<Uint8List>? _subscription;
   bool _started = false;
 
@@ -63,7 +64,8 @@ class RecorderAudioFrameSource implements AudioFrameSource {
       _activeSampleRateHz = preferredRate;
       return stream;
     } catch (_) {
-      if (currentAudioCapturePlatform() != AudioCapturePlatform.android || preferredRate == 44100) {
+      if (currentAudioCapturePlatform() != AudioCapturePlatform.android ||
+          preferredRate == 44100) {
         rethrow;
       }
       final stream = await _recorder.startStream(

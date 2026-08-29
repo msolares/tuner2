@@ -20,3 +20,6 @@ class SongTuningSubmitted extends SongTuningEvent {
   const SongTuningSubmitted();
 }
 
+class SongTuningResultCleared extends SongTuningEvent {
+  const SongTuningResultCleared();
+}

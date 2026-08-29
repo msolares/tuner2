@@ -3,9 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../domain/entities/pitch_sample.dart';
-import '../../domain/entities/song_tuning_result.dart';
+import '../../app/app_localizations.dart';
+import '../../app/app_version.dart';
 import '../../domain/entities/instrument_preset_profile.dart';
+import '../../domain/entities/song_tuning_result.dart';
 import '../../domain/entities/tuner_settings.dart';
 import '../bloc/song_tuning_bloc.dart';
 import '../bloc/song_tuning_event.dart';
@@ -13,6 +14,8 @@ import '../bloc/song_tuning_state.dart';
 import '../bloc/tuner_bloc.dart';
 import '../bloc/tuner_event.dart';
 import '../bloc/tuner_state.dart';
+
+const _isSongTuningVisible = false;
 
 class TunerScreen extends StatelessWidget {
   const TunerScreen({super.key});
@@ -23,8 +26,10 @@ class TunerScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF061A2B),
       body: BlocBuilder<TunerBloc, TunerState>(
         builder: (context, state) {
+          final l10n = AppLocalizations.of(context);
           final sample = state.sample;
-          final isListening = state is Listening || state is InTune || state is OutOfTune;
+          final isListening =
+              state is Listening || state is InTune || state is OutOfTune;
           final meterColor = switch (state) {
             InTune() => const Color(0xFF1ED49B),
             OutOfTune() => const Color(0xFFFFA726),
@@ -32,11 +37,11 @@ class TunerScreen extends StatelessWidget {
             _ => const Color(0xFF00C7FF),
           };
           final statusLabel = switch (state) {
-            InTune() => 'IN TUNE',
-            OutOfTune() => 'OUT OF TUNE',
-            Listening() => 'LISTENING',
-            ErrorState() => 'ERROR',
-            _ => 'IDLE',
+            InTune() => l10n.inTune,
+            OutOfTune() => l10n.adjust,
+            Listening() => l10n.listening,
+            ErrorState() => l10n.error,
+            _ => l10n.ready,
           };
 
           final displayNote = _extractPitchClass(sample?.note) ?? '--';
@@ -58,9 +63,12 @@ class TunerScreen extends StatelessWidget {
                   ListView(
                     padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
                     children: [
-                      _Header(sample: sample, state: state),
+                      _Header(state: state),
                       const SizedBox(height: 18),
-                      _StringSelector(activeNote: displayNote),
+                      _StringSelector(
+                        activeNote: displayNote,
+                        presetId: state.settings.instrumentPreset,
+                      ),
                       const SizedBox(height: 18),
                       _TunerCore(
                         note: displayNote,
@@ -74,27 +82,33 @@ class TunerScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _InfoCard(
-                              title: 'CENTS',
-                              value: '${cents >= 0 ? '+' : ''}${cents.toStringAsFixed(1)}',
+                              title: l10n.cents,
+                              value:
+                                  '${cents >= 0 ? '+' : ''}${cents.toStringAsFixed(1)}',
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _InfoCard(
-                              title: 'TARGET',
-                              value: targetHz == null ? '-- Hz' : '${targetHz.toStringAsFixed(2)} Hz',
+                              title: l10n.target,
+                              value: targetHz == null
+                                  ? '-- Hz'
+                                  : '${targetHz.toStringAsFixed(2)} Hz',
                             ),
                           ),
                         ],
                       ),
                       if (state is ErrorState) ...[
                         const SizedBox(height: 12),
-                        _ErrorBanner(message: state.message),
+                        _ErrorBanner(
+                            message: l10n.localizeError(state.message)),
                       ],
                       const SizedBox(height: 14),
                       _SettingsPanel(state: state),
-                      const SizedBox(height: 14),
-                      const _SongTuningPanel(),
+                      if (_isSongTuningVisible) ...[
+                        const SizedBox(height: 14),
+                        const _SongTuningPanel(),
+                      ],
                     ],
                   ),
                   Positioned(
@@ -111,14 +125,9 @@ class TunerScreen extends StatelessWidget {
                           bloc.add(const StartListening());
                         }
                       },
-                      child: Icon(isListening ? Icons.stop : Icons.play_arrow_rounded),
+                      child: Icon(
+                          isListening ? Icons.stop : Icons.play_arrow_rounded),
                     ),
-                  ),
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: _BottomNav(),
                   ),
                 ],
               ),
@@ -132,71 +141,145 @@ class TunerScreen extends StatelessWidget {
 
 class _Header extends StatelessWidget {
   const _Header({
-    required this.sample,
     required this.state,
   });
 
-  final PitchSample? sample;
   final TunerState state;
 
   @override
   Widget build(BuildContext context) {
-    final confidence = ((sample?.confidence ?? 0.0) * 100).clamp(0, 100).toStringAsFixed(0);
-    final label = switch (state) {
-      InTune() => 'Standard Tuning',
-      OutOfTune() => 'Adjusting Pitch',
-      Listening() => 'Listening',
-      ErrorState() => 'Error',
-      _ => 'Ready',
-    };
+    final l10n = AppLocalizations.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 380;
+    final presetId = state.settings.instrumentPreset;
+    final preset = kMvpInstrumentPresets.firstWhere(
+      (item) => item.id == presetId,
+      orElse: () => kMvpInstrumentPresets.first,
+    );
+    final presetLabel =
+        l10n.presetName(preset.id, fallback: preset.displayName);
     return Row(
       children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0A2A45),
-            borderRadius: BorderRadius.circular(20),
+        if (!compact) ...[
+          Container(
+            key: const ValueKey('tuner-brand-logo'),
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A2A45),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.menu_rounded, color: Color(0xFF33A8FF)),
           ),
-          child: const Icon(Icons.menu_rounded, color: Color(0xFF33A8FF)),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'CHROMATIC TUNER',
-                style: TextStyle(
-                  letterSpacing: 1.5,
-                  color: Color(0xFF8EA5BC),
-                  fontWeight: FontWeight.w700,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.liveTuner,
+                  style: const TextStyle(
+                    letterSpacing: 1.5,
+                    color: Color(0xFF8EA5BC),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+                const SizedBox(height: 3),
+                const Text(
+                  appVersionLabel,
+                  style: TextStyle(color: Color(0xFF607A92), fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ] else
+          const Expanded(
+            child: SizedBox(
+              key: ValueKey('tuner-brand-logo'),
+            ),
+          ),
+        Semantics(
+          button: true,
+          label: l10n.changeTuning(presetLabel),
+          child: PopupMenuButton<String>(
+            key: const ValueKey('header-preset-selector'),
+            tooltip: l10n.changeTuning(presetLabel),
+            initialValue: presetId,
+            color: const Color(0xFF142637),
+            onSelected: (value) {
+              context.read<TunerBloc>().add(SelectPreset(value));
+              context.read<SongTuningBloc>().add(
+                    const SongTuningResultCleared(),
+                  );
+            },
+            itemBuilder: (context) => kMvpInstrumentPresets
+                .map(
+                  (item) => PopupMenuItem<String>(
+                    key: ValueKey('preset-option-${item.id}'),
+                    value: item.id,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 24,
+                          child: item.id == presetId
+                              ? const Icon(
+                                  key: ValueKey('active-preset-check'),
+                                  Icons.check_rounded,
+                                  size: 18,
+                                  color: Color(0xFF19D39C),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.presetName(
+                            item.id,
+                            fallback: item.displayName,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF0075E5)),
+                color: const Color(0x1A0075E5),
               ),
-              const SizedBox(height: 4),
-              Row(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.circle, size: 8, color: Color(0xFF16C49A)),
+                  const Text(
+                    'AUTO',
+                    style: TextStyle(
+                      color: Color(0xFF8EA5BC),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Text(
-                    '$label | $confidence%',
-                    style: const TextStyle(color: Color(0xFFD7E5F2), fontWeight: FontWeight.w600),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 150),
+                    child: Text(
+                      presetLabel.toUpperCase(),
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF33A8FF),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF33A8FF),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: const Color(0xFF0075E5)),
-            color: const Color(0x1A0075E5),
-          ),
-          child: const Text(
-            'AUTO',
-            style: TextStyle(color: Color(0xFF33A8FF), fontWeight: FontWeight.w700),
+            ),
           ),
         ),
       ],
@@ -205,25 +288,43 @@ class _Header extends StatelessWidget {
 }
 
 class _StringSelector extends StatelessWidget {
-  const _StringSelector({required this.activeNote});
+  const _StringSelector({
+    required this.activeNote,
+    required this.presetId,
+  });
 
   final String activeNote;
-
-  static const List<String> _strings = ['e', 'B', 'G', 'D', 'A', 'E'];
+  final String presetId;
 
   @override
   Widget build(BuildContext context) {
+    final strings = _stringsForPreset(presetId);
+    if (strings.isEmpty) {
+      return Center(
+        child: Text(
+          AppLocalizations.of(context)
+              .presetName(presetId, fallback: 'Chromatic')
+              .toUpperCase(),
+          style: const TextStyle(
+            color: Color(0xFF8EA5BC),
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+        ),
+      );
+    }
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(_strings.length, (index) {
-        final item = _strings[index];
+      children: List.generate(strings.length, (index) {
+        final item = strings[index];
         final isActive = activeNote.toUpperCase() == item.toUpperCase();
         return Expanded(
           child: Column(
             children: [
               Text(
                 '${index + 1}',
-                style: const TextStyle(color: Color(0xFF567089), fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    color: Color(0xFF567089), fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               Container(
@@ -231,9 +332,12 @@ class _StringSelector extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isActive ? const Color(0xFF18D39A) : Colors.transparent,
+                  color:
+                      isActive ? const Color(0xFF18D39A) : Colors.transparent,
                   border: Border.all(
-                    color: isActive ? const Color(0xFF18D39A) : const Color(0xFF2D4A62),
+                    color: isActive
+                        ? const Color(0xFF18D39A)
+                        : const Color(0xFF2D4A62),
                   ),
                   boxShadow: isActive
                       ? const [
@@ -249,7 +353,9 @@ class _StringSelector extends StatelessWidget {
                 child: Text(
                   item,
                   style: TextStyle(
-                    color: isActive ? const Color(0xFF063727) : const Color(0xFFD2DEEA),
+                    color: isActive
+                        ? const Color(0xFF063727)
+                        : const Color(0xFFD2DEEA),
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -281,6 +387,7 @@ class _TunerCore extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const ValueKey('tuner-core-card'),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(44),
         gradient: const LinearGradient(
@@ -301,6 +408,7 @@ class _TunerCore extends StatelessWidget {
         children: [
           Text(
             note,
+            key: const ValueKey('current-note-text'),
             style: const TextStyle(
               fontSize: 102,
               height: 0.95,
@@ -326,6 +434,7 @@ class _TunerCore extends StatelessWidget {
             ),
             child: Text(
               statusLabel,
+              key: const ValueKey('tuner-status-text'),
               style: const TextStyle(
                 color: Color(0xFF062315),
                 fontWeight: FontWeight.w800,
@@ -392,32 +501,56 @@ class _SmoothCentsMeterState extends State<_SmoothCentsMeter> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final range = constraints.maxWidth - 4;
-                  final ratio = ((animatedCents + _maxCents) / (_maxCents * 2)).clamp(0.0, 1.0);
+                  final markerCents =
+                      animatedCents.abs() <= 8 ? 0.0 : animatedCents;
+                  final ratio = ((markerCents + _maxCents) / (_maxCents * 2))
+                      .clamp(0.0, 1.0);
                   final markerLeft = range * ratio;
                   return Stack(
                     children: [
                       Align(
                         alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(_barCount, (index) {
-                            final mid = (_barCount - 1) / 2;
-                            final distanceFromMid = (index - mid).abs();
-                            final centsAtBar = -_maxCents + (_maxCents * 2) * (index / (_barCount - 1));
-                            final proximity = (1 - ((centsAtBar - animatedCents).abs() / 8)).clamp(0.0, 1.0);
-                            final baseHeight = 9 + (1 - (distanceFromMid / mid)) * 11;
-                            final height = baseHeight + proximity * 2;
-                            final baseColor = _barColorForCents(centsAtBar);
-                            return Container(
-                              width: 3,
-                              height: height,
-                              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              key: const ValueKey('cents-center-band'),
+                              width: 12,
+                              height: 30,
                               decoration: BoxDecoration(
-                                color: baseColor.withOpacity(0.24 + (0.56 * proximity)),
-                                borderRadius: BorderRadius.circular(2),
+                                color: const Color(0x2219D39C),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                            );
-                          }),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(_barCount, (index) {
+                                final mid = (_barCount - 1) / 2;
+                                final distanceFromMid = (index - mid).abs();
+                                final centsAtBar = -_maxCents +
+                                    (_maxCents * 2) * (index / (_barCount - 1));
+                                final proximity = (1 -
+                                        ((centsAtBar - animatedCents).abs() /
+                                            8))
+                                    .clamp(0.0, 1.0);
+                                final baseHeight =
+                                    9 + (1 - (distanceFromMid / mid)) * 11;
+                                final height = baseHeight + proximity * 2;
+                                final baseColor = _barColorForCents(centsAtBar);
+                                return Container(
+                                  width: 3,
+                                  height: height,
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: baseColor
+                                        .withOpacity(0.24 + (0.56 * proximity)),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
                         ),
                       ),
                       Positioned(
@@ -425,6 +558,7 @@ class _SmoothCentsMeterState extends State<_SmoothCentsMeter> {
                         top: 1,
                         bottom: 1,
                         child: Container(
+                          key: const ValueKey('cents-marker'),
                           width: 3,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(2),
@@ -448,9 +582,15 @@ class _SmoothCentsMeterState extends State<_SmoothCentsMeter> {
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('-50', style: TextStyle(color: Color(0xFF869EB5), fontWeight: FontWeight.w700)),
-                Text('0', style: TextStyle(color: Color(0xFF869EB5), fontWeight: FontWeight.w700)),
-                Text('+50', style: TextStyle(color: Color(0xFF869EB5), fontWeight: FontWeight.w700)),
+                Text('-50',
+                    style: TextStyle(
+                        color: Color(0xFF869EB5), fontWeight: FontWeight.w700)),
+                Text('0',
+                    style: TextStyle(
+                        color: Color(0xFF869EB5), fontWeight: FontWeight.w700)),
+                Text('+50',
+                    style: TextStyle(
+                        color: Color(0xFF869EB5), fontWeight: FontWeight.w700)),
               ],
             ),
           ],
@@ -521,7 +661,8 @@ class _ErrorBanner extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: const TextStyle(color: Color(0xFFFFB4B4), fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: Color(0xFFFFB4B4), fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -534,6 +675,7 @@ class _SettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final a4 = state.settings.a4Hz;
     return Container(
       decoration: BoxDecoration(
@@ -545,28 +687,42 @@ class _SettingsPanel extends StatelessWidget {
         collapsedIconColor: const Color(0xFF86A1B8),
         iconColor: const Color(0xFF86A1B8),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-        title: const Text(
-          'Tuner Settings',
-          style: TextStyle(color: Color(0xFFD2DFEC), fontWeight: FontWeight.w700),
+        title: Text(
+          l10n.tunerSetup,
+          style:
+              TextStyle(color: Color(0xFFD2DFEC), fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
-          'A4 ${a4.toStringAsFixed(1)} Hz | ${state.settings.instrumentPreset}',
+          l10n.calibration,
           style: const TextStyle(color: Color(0xFF88A2B8)),
         ),
         childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Text(
+              l10n.calibration,
+              style: const TextStyle(
+                color: Color(0xFFD2DFEC),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
           Row(
             children: [
               Text(
                 '${a4.toStringAsFixed(1)} Hz',
-                style: const TextStyle(color: Color(0xFFD2E2F1), fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                    color: Color(0xFFD2E2F1), fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  context.read<TunerBloc>().add(const UpdateA4(TunerSettings.defaultA4Hz));
+                  context
+                      .read<TunerBloc>()
+                      .add(const UpdateA4(TunerSettings.defaultA4Hz));
                 },
-                child: const Text('Reset A4'),
+                child: Text(l10n.resetA4),
               ),
             ],
           ),
@@ -574,105 +730,15 @@ class _SettingsPanel extends StatelessWidget {
             value: a4,
             min: TunerSettings.minA4Hz,
             max: TunerSettings.maxA4Hz,
-            divisions: (TunerSettings.maxA4Hz - TunerSettings.minA4Hz).toInt() * 2,
+            divisions:
+                (TunerSettings.maxA4Hz - TunerSettings.minA4Hz).toInt() * 2,
             label: a4.toStringAsFixed(1),
-            onChanged: (value) => context.read<TunerBloc>().add(UpdateA4(value)),
+            onChanged: (value) =>
+                context.read<TunerBloc>().add(UpdateA4(value)),
           ),
-          DropdownButtonFormField<String>(
-            initialValue: state.settings.instrumentPreset,
-            decoration: const InputDecoration(
-              labelText: 'Preset',
-              border: OutlineInputBorder(),
-              filled: true,
-              fillColor: Color(0x66132436),
-            ),
-            items: kMvpInstrumentPresets
-                .map(
-                  (preset) => DropdownMenuItem<String>(
-                    value: preset.id,
-                    child: Text(preset.displayName),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value == null) {
-                return;
-              }
-              context.read<TunerBloc>().add(SelectPreset(value));
-            },
-          ),
-          const SizedBox(height: 8),
           Text(
-            'noiseGate ${state.settings.noiseGateDb.toStringAsFixed(1)} dB | smoothing ${state.settings.smoothing.toStringAsFixed(2)}',
+            '${l10n.noiseGate} ${state.settings.noiseGateDb.toStringAsFixed(1)} dB | ${l10n.smoothing} ${state.settings.smoothing.toStringAsFixed(2)}',
             style: const TextStyle(color: Color(0xFF88A2B8)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 78,
-      decoration: const BoxDecoration(
-        color: Color(0xCC11293E),
-        border: Border(top: BorderSide(color: Color(0x332D4B64))),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _BottomNavItem(icon: Icons.music_note_rounded, label: 'TUNER', active: true),
-          _BottomNavItem(icon: Icons.timer_outlined, label: 'METRONOME'),
-          _BottomNavItem(icon: Icons.library_music_outlined, label: 'SONGS'),
-          _BottomNavItem(icon: Icons.settings, label: 'SETTINGS'),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    this.active = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final activeColor = const Color(0xFF1A90FF);
-    final idleColor = const Color(0xFF8EA3B6);
-    return SizedBox(
-      width: 72,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: active ? const Color(0x332091FF) : Colors.transparent,
-              borderRadius: BorderRadius.circular(17),
-            ),
-            child: Icon(icon, color: active ? activeColor : idleColor, size: 20),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: active ? activeColor : idleColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ],
       ),
@@ -685,6 +751,7 @@ class _SongTuningPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return BlocBuilder<SongTuningBloc, SongTuningState>(
       builder: (context, state) {
         return Container(
@@ -697,17 +764,19 @@ class _SongTuningPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Song Tuning',
-                style: TextStyle(color: Color(0xFFD2DFEC), fontWeight: FontWeight.w700),
+              Text(
+                l10n.songTuning,
+                style: TextStyle(
+                    color: Color(0xFFD2DFEC), fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               TextField(
-                onChanged: (value) => context.read<SongTuningBloc>().add(SongNameChanged(value)),
+                onChanged: (value) =>
+                    context.read<SongTuningBloc>().add(SongNameChanged(value)),
                 style: const TextStyle(color: Color(0xFFEAF2FA)),
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de cancion',
-                  hintText: 'Ej: Everlong',
+                decoration: InputDecoration(
+                  labelText: l10n.songName,
+                  hintText: l10n.songHint,
                   labelStyle: TextStyle(color: Color(0xFFD2DFEC)),
                   hintStyle: TextStyle(color: Color(0xFF88A2B8)),
                   border: OutlineInputBorder(),
@@ -715,7 +784,8 @@ class _SongTuningPanel extends StatelessWidget {
                     borderSide: BorderSide(color: Color(0xFF2A445C)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF3FA8FF), width: 1.4),
+                    borderSide:
+                        BorderSide(color: Color(0xFF3FA8FF), width: 1.4),
                   ),
                   filled: true,
                   fillColor: Color(0x66132436),
@@ -726,7 +796,9 @@ class _SongTuningPanel extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: state.canSubmit
-                      ? () => context.read<SongTuningBloc>().add(const SongTuningSubmitted())
+                      ? () => context
+                          .read<SongTuningBloc>()
+                          .add(const SongTuningSubmitted())
                       : null,
                   child: state.isLoading
                       ? const SizedBox(
@@ -734,26 +806,30 @@ class _SongTuningPanel extends StatelessWidget {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Consultar afinacion'),
+                      : Text(l10n.queryTuning),
                 ),
               ),
-              if (state.status == SongTuningStatus.success && state.result != null) ...[
+              if (state.status == SongTuningStatus.success &&
+                  state.result != null) ...[
                 const SizedBox(height: 10),
                 _SongTuningResultCard(result: state.result!),
               ],
-              if (state.status == SongTuningStatus.error && state.errorMessage != null) ...[
+              if (state.status == SongTuningStatus.error &&
+                  state.errorMessage != null) ...[
                 const SizedBox(height: 10),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: const Color(0x33FF5C5C),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0x88FF8080)),
                   ),
                   child: Text(
-                    state.errorMessage!,
-                    style: const TextStyle(color: Color(0xFFFFB4B4), fontWeight: FontWeight.w600),
+                    l10n.localizeError(state.errorMessage!),
+                    style: const TextStyle(
+                        color: Color(0xFFFFB4B4), fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -772,6 +848,7 @@ class _SongTuningResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -783,8 +860,8 @@ class _SongTuningResultCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Afinacion recomendada',
+          Text(
+            l10n.recommendedTuning,
             style: TextStyle(
               color: Color(0xFFBDEEDB),
               fontWeight: FontWeight.w700,
@@ -793,12 +870,13 @@ class _SongTuningResultCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${result.primaryTuning.displayName}: ${result.primaryTuning.stringsLowToHigh.join(' ')}',
-            style: const TextStyle(color: Color(0xFFDDF7EA), fontWeight: FontWeight.w600),
+            style: const TextStyle(
+                color: Color(0xFFDDF7EA), fontWeight: FontWeight.w600),
           ),
           if (result.hasAlternatives) ...[
             const SizedBox(height: 6),
-            const Text(
-              'Alternativas',
+            Text(
+              l10n.alternatives,
               style: TextStyle(
                 color: Color(0xFFBDEEDB),
                 fontWeight: FontWeight.w700,
@@ -809,7 +887,8 @@ class _SongTuningResultCard extends StatelessWidget {
             ...result.alternativeTunings.map<Widget>(
               (alternative) => Text(
                 '${alternative.displayName}: ${alternative.stringsLowToHigh.join(' ')}',
-                style: const TextStyle(color: Color(0xFFDDF7EA), fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                    color: Color(0xFFDDF7EA), fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -817,6 +896,16 @@ class _SongTuningResultCard extends StatelessWidget {
       ),
     );
   }
+}
+
+List<String> _stringsForPreset(String presetId) {
+  return switch (presetId) {
+    'guitar_standard' => const ['e', 'B', 'G', 'D', 'A', 'E'],
+    'ukulele_standard' => const ['A', 'E', 'C', 'G'],
+    'bass_standard' => const ['G', 'D', 'A', 'E'],
+    'violin_standard' => const ['E', 'A', 'D', 'G'],
+    _ => const [],
+  };
 }
 
 String? _extractPitchClass(String? note) {

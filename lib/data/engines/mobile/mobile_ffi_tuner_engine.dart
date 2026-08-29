@@ -12,7 +12,11 @@ import '../../../domain/services/tuner_engine.dart';
 import '../../../domain/services/tuner_engine_exception.dart';
 import '../../audio/audio_frame_source.dart';
 import '../../audio/audio_pcm_frame.dart';
+import '../common/analysis_window_buffer.dart';
+import '../common/pitch_emission_gate.dart';
 import '../common/pitch_range.dart';
+import '../common/pitch_reliability_gate.dart';
+import '../common/pitch_reliability_profile.dart';
 import '../common/pitch_stabilization_profile.dart';
 import '../common/pitch_stabilizer.dart';
 import '../common/simple_pitch_detector.dart';
@@ -21,23 +25,30 @@ class MobileFfiTunerEngine implements TunerEngine {
   MobileFfiTunerEngine({
     required AudioFrameSource frameSource,
     SimplePitchDetector? fallbackDetector,
+    AnalysisWindowBuffer? analysisWindowBuffer,
+    PitchEmissionGate? emissionGate,
+    PitchReliabilityGate? reliabilityGate,
     PitchStabilizer? stabilizer,
   })  : _frameSource = frameSource,
         _fallbackDetector = fallbackDetector ?? SimplePitchDetector(),
+        _analysisWindowBuffer = analysisWindowBuffer ?? AnalysisWindowBuffer(),
+        _emissionGate = emissionGate ?? PitchEmissionGate(),
+        _reliabilityGate = reliabilityGate ?? PitchReliabilityGate(),
         _stabilizer = stabilizer ?? PitchStabilizer();
 
   final AudioFrameSource _frameSource;
   final SimplePitchDetector _fallbackDetector;
-  final StreamController<PitchSample> _controller = StreamController<PitchSample>.broadcast();
+  final AnalysisWindowBuffer _analysisWindowBuffer;
+  final PitchEmissionGate _emissionGate;
+  final PitchReliabilityGate _reliabilityGate;
+  final StreamController<PitchSample> _controller =
+      StreamController<PitchSample>.broadcast();
   StreamSubscription<AudioPcmFrame>? _frameSubscription;
   _RustBindings? _ffi;
   int _handle = 0;
   TunerSettings _settings = TunerSettings.defaults;
   bool _started = false;
   final PitchStabilizer _stabilizer;
-  int _lastEmittedTimestampMs = 0;
-
-  static const int _emitIntervalMs = 90;
 
   @override
   Future<void> start(TunerSettings settings) async {
@@ -47,12 +58,18 @@ class MobileFfiTunerEngine implements TunerEngine {
         throw TunerEngineException(_mapFfiCodeToPolicyCode(code));
       }
       _settings = settings;
+      _analysisWindowBuffer.reset();
+      _emissionGate.reset();
+      _reliabilityGate.reset();
+      _stabilizer.reset();
       return;
     }
     await stop();
     _settings = settings;
+    _analysisWindowBuffer.reset();
+    _emissionGate.reset();
+    _reliabilityGate.reset();
     _stabilizer.reset();
-    _lastEmittedTimestampMs = 0;
     _ffi = _RustBindings.tryLoad();
     if (_ffi != null) {
       _handle = _ffi!.init(_encodeSettings(settings));
@@ -88,24 +105,40 @@ class MobileFfiTunerEngine implements TunerEngine {
       }
     }
     _started = false;
+    _analysisWindowBuffer.reset();
+    _emissionGate.reset();
+    _reliabilityGate.reset();
     _stabilizer.reset();
-    _lastEmittedTimestampMs = 0;
   }
 
   void _onFrame(AudioPcmFrame frame) {
     if (!_started) {
       return;
     }
-    final sample = _ffi != null ? _processFrameWithFfi(frame) : _processFrameWithFallback(frame);
+    final analysisFrame = _analysisWindowBuffer.push(
+      frame,
+      windowFrames: analysisWindowFramesForPreset(_settings.instrumentPreset),
+    );
+    if (analysisFrame == null) {
+      return;
+    }
+    final sample = _ffi != null
+        ? _processFrameWithFfi(analysisFrame)
+        : _processFrameWithFallback(analysisFrame);
     if (sample != null) {
       final preset = _settings.instrumentPreset;
+      final gated = _reliabilityGate.filter(
+        sample: sample.copyWith(timestampMs: analysisFrame.timestampMs),
+        profile: reliabilityProfileForPreset(preset),
+      );
+      final profile = stabilizationProfileForPreset(preset);
       final stabilized = _stabilizer.stabilize(
-        sample: sample.copyWith(timestampMs: frame.timestampMs),
+        sample: gated,
         range: rangeForPreset(preset),
         smoothing: _settings.smoothing,
-        profile: stabilizationProfileForPreset(preset),
+        profile: profile,
       );
-      if (_shouldEmit(stabilized.timestampMs)) {
+      if (_emissionGate.shouldEmit(sample: stabilized, profile: profile)) {
         _controller.add(stabilized);
       }
     }
@@ -115,7 +148,8 @@ class MobileFfiTunerEngine implements TunerEngine {
     if (_handle == 0 || _ffi == null) {
       throw const TunerEngineException('ffi_invalid_handle');
     }
-    final result = _ffi!.processFrame(_handle, frame.pcmFloat32, frame.sampleRateHz);
+    final result =
+        _ffi!.processFrame(_handle, frame.pcmFloat32, frame.sampleRateHz);
     if (result.errorCode != _FfiErrorCode.ok) {
       throw TunerEngineException(_mapFfiCodeToPolicyCode(result.errorCode));
     }
@@ -139,14 +173,6 @@ class MobileFfiTunerEngine implements TunerEngine {
       minFrequencyHz: range.minHz,
       maxFrequencyHz: range.maxHz,
     );
-  }
-
-  bool _shouldEmit(int timestampMs) {
-    if (_lastEmittedTimestampMs == 0 || timestampMs - _lastEmittedTimestampMs >= _emitIntervalMs) {
-      _lastEmittedTimestampMs = timestampMs;
-      return true;
-    }
-    return false;
   }
 
   String _encodeSettings(TunerSettings settings) {
@@ -182,12 +208,17 @@ class MobileFfiTunerEngine implements TunerEngine {
 
 class _RustBindings {
   _RustBindings._(DynamicLibrary dylib)
-      : _tunerInit = dylib.lookupFunction<_TunerInitNative, _TunerInit>('tuner_init'),
+      : _tunerInit =
+            dylib.lookupFunction<_TunerInitNative, _TunerInit>('tuner_init'),
         _tunerProcessFrame =
-            dylib.lookupFunction<_TunerProcessFrameNative, _TunerProcessFrame>('tuner_process_frame'),
+            dylib.lookupFunction<_TunerProcessFrameNative, _TunerProcessFrame>(
+                'tuner_process_frame'),
         _tunerUpdateConfig =
-            dylib.lookupFunction<_TunerUpdateConfigNative, _TunerUpdateConfig>('tuner_update_config'),
-        _tunerDispose = dylib.lookupFunction<_TunerDisposeNative, _TunerDispose>('tuner_dispose');
+            dylib.lookupFunction<_TunerUpdateConfigNative, _TunerUpdateConfig>(
+                'tuner_update_config'),
+        _tunerDispose =
+            dylib.lookupFunction<_TunerDisposeNative, _TunerDispose>(
+                'tuner_dispose');
 
   final _TunerInit _tunerInit;
   final _TunerProcessFrame _tunerProcessFrame;
@@ -230,7 +261,8 @@ class _RustBindings {
     }
   }
 
-  _PitchResultModel processFrame(int handle, Float32List pcm, int sampleRateHz) {
+  _PitchResultModel processFrame(
+      int handle, Float32List pcm, int sampleRateHz) {
     final ptr = calloc<Float>(pcm.length);
     try {
       for (var i = 0; i < pcm.length; i++) {
@@ -317,8 +349,10 @@ typedef _TunerProcessFrame = _PitchResult Function(
   int sampleRate,
 );
 
-typedef _TunerUpdateConfigNative = Int32 Function(Uint64 handle, Pointer<Utf8> configJsonPtr);
-typedef _TunerUpdateConfig = int Function(int handle, Pointer<Utf8> configJsonPtr);
+typedef _TunerUpdateConfigNative = Int32 Function(
+    Uint64 handle, Pointer<Utf8> configJsonPtr);
+typedef _TunerUpdateConfig = int Function(
+    int handle, Pointer<Utf8> configJsonPtr);
 
 typedef _TunerDisposeNative = Int32 Function(Uint64 handle);
 typedef _TunerDispose = int Function(int handle);

@@ -49,6 +49,18 @@ Arquitectura target: Flutter + Rust FFI, con implementacion Web en Dart bajo el 
 - Eventos: `StartListening`, `StopListening`, `UpdateA4`, `SelectPreset`, `AudioPermissionChecked`.
 - Estados: `Idle`, `Listening`, `InTune`, `OutOfTune`, `ErrorState`.
 
+### Contratos Dart (metronomo)
+- `TimeSignature { numerator, denominator }`
+- `BeatConfig { accent, subdivision }`
+- `MetronomeSettings { bpm, timeSignature, beats }`
+- `MetronomeTick { beatIndex, subdivisionIndex, timestampMs, accent }`
+- `abstract class MetronomeEngine`
+- `Future<void> start(MetronomeSettings settings)`
+- `Future<void> update(MetronomeSettings settings)`
+- `Stream<MetronomeTick> ticks()`
+- `Future<void> stop()`
+- La implementacion del metronomo debe respetar las mismas capas y el mismo contrato en movil y Web.
+
 ### Contrato Rust FFI (movil)
 - `tuner_init(config_json_ptr) -> handle`
 - `tuner_process_frame(handle, pcm_ptr, len, sample_rate) -> pitch_result`

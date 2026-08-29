@@ -19,6 +19,7 @@ Garantizar calidad mínima antes de release del MVP.
 - Flujo start/stop estable.
 - Calibración A4 validada.
 - Casos de audio ruidoso evaluados.
+- Falsos positivos frente a `voz`, aire y ventilador evaluados con evidencia.
 
 ## Criterios de aceptación
 - Condición Go/No-Go documentada.

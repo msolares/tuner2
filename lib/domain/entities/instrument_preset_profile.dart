@@ -22,7 +22,7 @@ const List<InstrumentPresetProfile> kMvpInstrumentPresets = [
   InstrumentPresetProfile(
     id: 'guitar_standard',
     displayName: 'Guitar (EADGBE)',
-    noiseGateDb: -55.0,
+    noiseGateDb: -60.0,
     smoothing: 0.24,
   ),
   InstrumentPresetProfile(

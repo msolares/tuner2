@@ -8,4 +8,3 @@ abstract class SongTuningService {
   /// Puede lanzar [SongTuningLookupException] para errores funcionales del flujo.
   Future<SongTuningResult> resolve(SongTuningQuery query);
 }
-

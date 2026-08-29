@@ -24,7 +24,8 @@ class SongTuningState extends Equatable {
   final String? errorCode;
   final String? errorMessage;
 
-  bool get canSubmit => songName.trim().isNotEmpty && status != SongTuningStatus.loading;
+  bool get canSubmit =>
+      songName.trim().isNotEmpty && status != SongTuningStatus.loading;
   bool get isLoading => status == SongTuningStatus.loading;
 
   SongTuningState copyWith({
@@ -54,4 +55,3 @@ class SongTuningState extends Equatable {
         errorMessage,
       ];
 }
-

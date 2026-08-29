@@ -13,6 +13,7 @@ class SongTuningBloc extends Bloc<SongTuningEvent, SongTuningState> {
         super(const SongTuningState()) {
     on<SongNameChanged>(_onSongNameChanged);
     on<SongTuningSubmitted>(_onSongTuningSubmitted);
+    on<SongTuningResultCleared>(_onSongTuningResultCleared);
   }
 
   final SongTuningService _songTuningService;
@@ -85,6 +86,19 @@ class SongTuningBloc extends Bloc<SongTuningEvent, SongTuningState> {
     }
   }
 
+  void _onSongTuningResultCleared(
+    SongTuningResultCleared event,
+    Emitter<SongTuningState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        status: SongTuningStatus.idle,
+        clearResult: true,
+        clearError: true,
+      ),
+    );
+  }
+
   String _mapErrorMessage(SongTuningLookupException error) {
     if (error.code == SongTuningErrorCode.unauthorized) {
       if (error.message == 'openai_api_key_missing') {
@@ -94,15 +108,23 @@ class SongTuningBloc extends Bloc<SongTuningEvent, SongTuningState> {
     }
 
     return switch (error.code) {
-      SongTuningErrorCode.invalidQuery => 'Ingresa una cancion valida para consultar.',
-      SongTuningErrorCode.notFound => 'No encontramos una afinacion para esa cancion.',
-      SongTuningErrorCode.ambiguousSong => 'Hay varias coincidencias. Prueba con un titulo mas especifico.',
+      SongTuningErrorCode.invalidQuery =>
+        'Ingresa una cancion valida para consultar.',
+      SongTuningErrorCode.notFound =>
+        'No encontramos una afinacion para esa cancion.',
+      SongTuningErrorCode.ambiguousSong =>
+        'Hay varias coincidencias. Prueba con un titulo mas especifico.',
       SongTuningErrorCode.timeout => 'La consulta tardo demasiado. Reintenta.',
-      SongTuningErrorCode.rateLimited => 'Demasiadas consultas seguidas. Espera unos segundos.',
-      SongTuningErrorCode.providerUnavailable => 'Servicio temporalmente no disponible. Reintenta.',
-      SongTuningErrorCode.invalidResponse => 'Respuesta no valida del servicio de afinacion.',
-      SongTuningErrorCode.unknown => 'No se pudo obtener la afinacion en este momento.',
-      SongTuningErrorCode.unauthorized => 'OpenAI rechazo la API key o los permisos del proyecto (401/403).',
+      SongTuningErrorCode.rateLimited =>
+        'Demasiadas consultas seguidas. Espera unos segundos.',
+      SongTuningErrorCode.providerUnavailable =>
+        'Servicio temporalmente no disponible. Reintenta.',
+      SongTuningErrorCode.invalidResponse =>
+        'Respuesta no valida del servicio de afinacion.',
+      SongTuningErrorCode.unknown =>
+        'No se pudo obtener la afinacion en este momento.',
+      SongTuningErrorCode.unauthorized =>
+        'OpenAI rechazo la API key o los permisos del proyecto (401/403).',
     };
   }
 }

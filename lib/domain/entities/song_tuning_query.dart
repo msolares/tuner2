@@ -38,4 +38,3 @@ class SongTuningQuery {
     return 'SongTuningQuery(songName: $songName, artistName: $artistName)';
   }
 }
-

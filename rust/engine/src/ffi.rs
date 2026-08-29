@@ -430,6 +430,7 @@ pub extern "C" fn tuner_init(config_json_ptr: *const c_char) -> u64 {
 }
 
 #[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn tuner_process_frame(
     handle: u64,
     pcm_ptr: *const f32,
@@ -626,6 +627,34 @@ mod tests {
         }
 
         assert_eq!(note_from_result(result), "G3");
+        assert!(result.cents.abs() < 20.0, "cents drift: {}", result.cents);
+
+        assert_eq!(tuner_dispose(handle), ErrorCode::Ok as i32);
+    }
+
+    #[test]
+    fn guitar_preset_resolves_harmonic_rich_e2_as_e2() {
+        let config = CString::new(
+            r#"{"a4Hz":440.0,"instrumentPreset":"guitar_standard","noiseGateDb":-60.0,"smoothing":0.2}"#,
+        )
+        .expect("valid cstring");
+        let handle = tuner_init(config.as_ptr());
+        assert_ne!(handle, 0);
+
+        let frame = harmonic_wave(
+            82.41,
+            48_000,
+            4096,
+            &[(1.0, 0.16), (2.0, 0.82), (3.0, 0.32), (4.0, 0.16)],
+        );
+
+        let mut result = PitchResult::err(ErrorCode::InternalError);
+        for _ in 0..4 {
+            result = tuner_process_frame(handle, frame.as_ptr(), frame.len(), 48_000);
+            assert_eq!(result.error_code, ErrorCode::Ok as i32);
+        }
+
+        assert_eq!(note_from_result(result), "E2");
         assert!(result.cents.abs() < 20.0, "cents drift: {}", result.cents);
 
         assert_eq!(tuner_dispose(handle), ErrorCode::Ok as i32);

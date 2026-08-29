@@ -37,4 +37,3 @@ class SongTuningResult {
     return 'SongTuningResult(query: $query, primaryTuning: $primaryTuning, alternativeTunings: $alternativeTunings)';
   }
 }
-

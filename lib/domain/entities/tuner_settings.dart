@@ -25,9 +25,9 @@ class TunerSettings {
 
   static const TunerSettings defaults = TunerSettings(
     a4Hz: defaultA4Hz,
-    instrumentPreset: 'chromatic',
+    instrumentPreset: 'guitar_standard',
     noiseGateDb: -60.0,
-    smoothing: 0.2,
+    smoothing: 0.24,
   );
 
   TunerSettings copyWith({

@@ -56,7 +56,14 @@ impl Smoother {
         };
 
         let energy = (detection.signal_rms * 8.0).clamp(0.0, 1.0);
-        let confidence = 0.45 * energy + 0.35 * detection.periodicity_hint + 0.20 * stability;
+        let ambiguity_penalty = if detection.candidate_count > 1 {
+            0.92_f32.powi((detection.candidate_count - 1) as i32)
+        } else {
+            1.0
+        };
+        let pitch_strength =
+            (0.60 * detection.periodicity_hint + 0.40 * detection.clarity) * ambiguity_penalty;
+        let confidence = 0.40 * energy + 0.40 * pitch_strength + 0.20 * stability;
         self.last_hz = Some(smoothed_hz);
 
         SmoothedPitch {
@@ -87,6 +94,8 @@ mod tests {
             hz: 440.0,
             signal_rms: 0.6,
             periodicity_hint: 0.9,
+            clarity: 0.88,
+            candidate_count: 1,
         };
         let result = smoother.apply(sample);
         assert!((0.0..=1.0).contains(&result.confidence));
@@ -99,6 +108,8 @@ mod tests {
             hz: 0.0,
             signal_rms: 0.02,
             periodicity_hint: 0.1,
+            clarity: 0.0,
+            candidate_count: 0,
         });
         assert_eq!(result.hz, 0.0);
         assert_eq!(result.confidence, 0.0);

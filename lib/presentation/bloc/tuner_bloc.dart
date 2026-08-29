@@ -71,15 +71,8 @@ class TunerBloc extends Bloc<TunerEvent, TunerState> {
       return;
     }
 
-    await _stopEngineSafely();
     try {
-      await _engine.start(_settings);
-      _samplesSubscription = _engine.samples().listen(
-        (sample) => add(_SampleReceived(sample)),
-        onError: (_) {
-          add(const _EngineFailed('engine_stream_error'));
-        },
-      );
+      await _restartEngineAndSubscription();
       emit(Listening(settings: _settings, sample: state.sample));
     } on TunerEngineException catch (error) {
       _emitPolicyError(emit, error.code);
@@ -137,7 +130,7 @@ class TunerBloc extends Bloc<TunerEvent, TunerState> {
 
   Future<bool> _applySettingsToRunningEngine(Emitter<TunerState> emit) async {
     try {
-      await _engine.start(_settings);
+      await _restartEngineAndSubscription();
       return true;
     } on TunerEngineException catch (error) {
       _emitPolicyError(emit, error.code);
@@ -145,6 +138,17 @@ class TunerBloc extends Bloc<TunerEvent, TunerState> {
       _emitPolicyError(emit, 'engine_stream_error');
     }
     return false;
+  }
+
+  Future<void> _restartEngineAndSubscription() async {
+    await _stopEngineSafely();
+    await _engine.start(_settings);
+    _samplesSubscription = _engine.samples().listen(
+      (sample) => add(_SampleReceived(sample)),
+      onError: (_) {
+        add(const _EngineFailed('engine_stream_error'));
+      },
+    );
   }
 
   Future<void> _stopEngineSafely() async {
@@ -220,6 +224,10 @@ class TunerBloc extends Bloc<TunerEvent, TunerState> {
   }
 
   void onSample(PitchSample sample, Emitter<TunerState> emit) {
+    if (sample.hz <= 0 || sample.note == '--' || sample.confidence <= 0) {
+      emit(Listening(settings: _settings, sample: sample));
+      return;
+    }
     final isInTune = sample.confidence >= 0.6 && sample.cents.abs() <= 5.0;
     if (isInTune) {
       emit(InTune(settings: _settings, sample: sample));

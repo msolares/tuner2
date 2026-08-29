@@ -10,7 +10,7 @@
 - E05
 
 ## Dependencias
-- T022, T023, T024, T025, T028, T029, T030
+- T022, T023, T024, T025, T028, T029, T030, T037, T038, T039, T040
 
 ## Objetivo
 Ejecutar validacion integral del afinador con microfono real en Android, iOS y Web usando los planes de calidad oficiales.
@@ -23,6 +23,7 @@ Ejecutar validacion integral del afinador con microfono real en Android, iOS y W
 
 ## Criterios de aceptacion
 - Se validan escenarios obligatorios: nota sostenida, cambios rapidos, ruido, cambio A4 en caliente y permisos denegados.
+- Se ejecuta el protocolo `specs/quality/noise-rejection-protocol.md` con evidencia enlazada por plataforma.
 - No hay crashes en `start/stop` repetido ni leaks detectables de recursos.
 - Pruebas definidas en `specs/quality/*.md` ejecutadas con evidencia enlazada.
 - Protocolo de precision `specs/quality/pitch-accuracy-protocol.md` ejecutado en Android, iOS y Web.

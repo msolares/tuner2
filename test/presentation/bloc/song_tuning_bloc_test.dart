@@ -70,6 +70,37 @@ void main() {
 
       await bloc.close();
     });
+
+    test('limpieza explicita: resetea resultado aplicado al encabezado', () async {
+      final service = _FakeSongTuningService(
+        result: SongTuningResult(
+          query: const SongTuningQuery(songName: 'Everlong'),
+          primaryTuning: const GuitarTuning(
+            id: 'drop_d',
+            displayName: 'Drop D',
+            stringsLowToHigh: ['D2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+          ),
+        ),
+      );
+      final bloc = SongTuningBloc(songTuningService: service);
+
+      bloc.add(const SongNameChanged('Everlong'));
+      bloc.add(const SongTuningSubmitted());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(bloc.state.status, SongTuningStatus.success);
+      expect(bloc.state.result, isNotNull);
+
+      bloc.add(const SongTuningResultCleared());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(bloc.state.status, SongTuningStatus.idle);
+      expect(bloc.state.result, isNull);
+      expect(bloc.state.errorCode, isNull);
+      expect(bloc.state.errorMessage, isNull);
+
+      await bloc.close();
+    });
   });
 }
 
@@ -95,4 +126,3 @@ class _FakeSongTuningService implements SongTuningService {
     throw const SongTuningLookupException(SongTuningErrorCode.unknown);
   }
 }
-

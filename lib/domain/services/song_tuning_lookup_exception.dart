@@ -32,18 +32,21 @@ class SongTuningLookupException implements Exception {
       SongTuningErrorCode.ambiguousSong => SongTuningRecoverability.recoverable,
       SongTuningErrorCode.timeout => SongTuningRecoverability.recoverable,
       SongTuningErrorCode.rateLimited => SongTuningRecoverability.recoverable,
-      SongTuningErrorCode.providerUnavailable => SongTuningRecoverability.recoverable,
-      SongTuningErrorCode.unauthorized => SongTuningRecoverability.nonRecoverable,
-      SongTuningErrorCode.invalidResponse => SongTuningRecoverability.nonRecoverable,
+      SongTuningErrorCode.providerUnavailable =>
+        SongTuningRecoverability.recoverable,
+      SongTuningErrorCode.unauthorized =>
+        SongTuningRecoverability.nonRecoverable,
+      SongTuningErrorCode.invalidResponse =>
+        SongTuningRecoverability.nonRecoverable,
       SongTuningErrorCode.unknown => SongTuningRecoverability.nonRecoverable,
     };
   }
 
-  bool get recoverable => recoverability == SongTuningRecoverability.recoverable;
+  bool get recoverable =>
+      recoverability == SongTuningRecoverability.recoverable;
 
   @override
   String toString() {
     return 'SongTuningLookupException(code: $code, recoverability: $recoverability, message: $message)';
   }
 }
-

@@ -46,12 +46,16 @@ class PitchStabilizer {
         );
 
     var candidate = sample;
-    if (candidate.hz > 0 && (candidate.hz < range.minHz || candidate.hz > range.maxHz)) {
-      candidate = candidate.copyWith(hz: 0, note: '--', cents: 0, confidence: 0);
+    if (candidate.hz > 0 &&
+        (candidate.hz < range.minHz || candidate.hz > range.maxHz)) {
+      candidate =
+          candidate.copyWith(hz: 0, note: '--', cents: 0, confidence: 0);
     }
 
-    if (candidate.hz <= 0 || candidate.confidence < effectiveProfile.minReliableConfidence) {
-      final held = _holdLastStable(candidate.timestampMs, profile: effectiveProfile);
+    if (candidate.hz <= 0 ||
+        candidate.confidence < effectiveProfile.minReliableConfidence) {
+      final held =
+          _holdLastStable(candidate.timestampMs, profile: effectiveProfile);
       if (held != null) {
         return held;
       }
@@ -72,6 +76,19 @@ class PitchStabilizer {
       previous: previous,
       profile: effectiveProfile,
     );
+    if (resolvedNote == candidate.note && resolvedNote != previous.note) {
+      final switched = candidate.copyWith(note: resolvedNote);
+      _lastStableSample = switched;
+      return switched;
+    }
+    if (candidate.note != previous.note) {
+      final held = previous.copyWith(
+        timestampMs: candidate.timestampMs,
+        confidence: _lerp(previous.confidence, candidate.confidence, 0.25),
+      );
+      _lastStableSample = held;
+      return held;
+    }
     final alpha = _blendAlpha(
       smoothing,
       sample: candidate,
@@ -82,7 +99,8 @@ class PitchStabilizer {
       note: resolvedNote,
       hz: _lerp(previous.hz, candidate.hz, alpha),
       cents: _lerp(previous.cents, candidate.cents, alpha),
-      confidence: _lerp(previous.confidence, candidate.confidence, (alpha + 0.25).clamp(0.0, 1.0)),
+      confidence: _lerp(previous.confidence, candidate.confidence,
+          (alpha + 0.25).clamp(0.0, 1.0)),
     );
     _lastStableSample = stabilized;
     return stabilized;
@@ -98,7 +116,8 @@ class PitchStabilizer {
       return null;
     }
     _heldFrames += 1;
-    final confidence = (previous.confidence - 0.08 * _heldFrames).clamp(0.0, 1.0);
+    final confidence =
+        (previous.confidence - 0.08 * _heldFrames).clamp(0.0, 1.0);
     return previous.copyWith(confidence: confidence, timestampMs: timestampMs);
   }
 
@@ -164,12 +183,18 @@ class PitchStabilizer {
     required PitchStabilizationProfile profile,
   }) {
     final normalized = smoothing.clamp(0.0, 1.0);
-    final baseAlpha = (normalized * 0.45).clamp(0.05, 0.20);
+    final baseAlpha = (0.08 + normalized * 0.18).clamp(0.08, 0.26);
     final centsDelta = (sample.cents - previous.cents).abs();
-    if (centsDelta >= profile.fastResponseCentsDelta) {
+    final hzJumpRatio =
+        previous.hz > 0 ? (sample.hz - previous.hz).abs() / previous.hz : 0.0;
+    final noteChanged = sample.note != '--' && sample.note != previous.note;
+    if (centsDelta >= profile.fastResponseCentsDelta ||
+        noteChanged ||
+        hzJumpRatio >= profile.fastSwitchHzJumpRatio) {
       return baseAlpha.clamp(profile.fastResponseAlpha, 0.45).toDouble();
     }
-    return baseAlpha;
+    final responsiveBoost = (centsDelta / 180.0).clamp(0.0, 0.08);
+    return (baseAlpha + responsiveBoost).clamp(baseAlpha, 0.30).toDouble();
   }
 
   double _lerp(double previous, double current, double alpha) {

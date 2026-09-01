@@ -21,6 +21,8 @@ Incorporar un modo educativo horizontal con mastil virtual que cargue ejercicios
 - Tras un acierto ejecuta feedback de 250 ms y reentrada de un pulso.
 - Los 250 ms de feedback se cierran con tiempo monotonico del clock sin avanzar
   la posicion musical.
+- El clock recibe el mapa de tempo canonico al iniciar; calcula ticks desde
+  objetivos monotónicos absolutos y aplica sus cambios sin asumir BPM fijo.
 - La velocidad puede cambiar durante la cuenta inicial, ademas de en los estados
   interactivos definidos por UC-L07.
 - El shell incorpora un tercer destino inferior `Clases`; su catalogo inicial es local y todas las clases estan disponibles.

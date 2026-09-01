@@ -28,6 +28,7 @@ class AppLocalizations {
   String get appTitle => isSpanish ? 'Afinador' : 'Guitar Tuner';
   String get tuner => isSpanish ? 'AFINADOR' : 'TUNER';
   String get metronome => isSpanish ? 'METRÓNOMO' : 'METRONOME';
+  String get classes => isSpanish ? 'CLASES' : 'LESSONS';
 
   String get ready => isSpanish ? 'LISTO' : 'READY';
   String get playing => isSpanish ? 'REPRODUCIENDO' : 'PLAY';
@@ -171,6 +172,106 @@ class AppLocalizations {
 
   String triplet(String noteName) =>
       isSpanish ? 'Tresillo de $noteName' : '$noteName triplet';
+
+  String get lessonLoading =>
+      isSpanish ? 'Preparando la lección' : 'Preparing lesson';
+  String get startPractice =>
+      isSpanish ? 'EMPEZAR PRÁCTICA' : 'START PRACTICE';
+  String get stopPractice => isSpanish ? 'DETENER' : 'STOP';
+  String get pausePractice => isSpanish ? 'PAUSAR' : 'PAUSE';
+  String get resumePractice => isSpanish ? 'CONTINUAR' : 'RESUME';
+  String get repeatSection =>
+      isSpanish ? 'REPETIR SECCIÓN' : 'REPEAT SECTION';
+  String get lessonSpeed => isSpanish ? 'VELOCIDAD' : 'SPEED';
+  String get decreaseSpeed =>
+      isSpanish ? 'Reducir velocidad' : 'Decrease speed';
+  String get increaseSpeed =>
+      isSpanish ? 'Aumentar velocidad' : 'Increase speed';
+  String get microphone => isSpanish ? 'MICRÓFONO' : 'MICROPHONE';
+  String get microphoneReady => isSpanish ? 'Preparado' : 'Ready';
+  String get microphoneListening => isSpanish ? 'Escuchando' : 'Listening';
+  String get lessonProgress => isSpanish ? 'PROGRESO' : 'PROGRESS';
+  String get lessonMeasure => isSpanish ? 'COMPÁS' : 'MEASURE';
+  String get lessonAttempt => isSpanish ? 'INTENTO' : 'ATTEMPT';
+  String get lessonTarget => isSpanish ? 'OBJETIVO' : 'TARGET';
+  String get targetNote => isSpanish ? 'NOTA' : 'NOTE';
+  String get targetChord => isSpanish ? 'ACORDE' : 'CHORD';
+  String get pitchEvidence =>
+      isSpanish ? 'TONOS DETECTADOS' : 'DETECTED TONES';
+  String get pendingEvidence => isSpanish ? 'Pendiente' : 'Pending';
+  String get rotateToPractice => isSpanish
+      ? 'Gira el dispositivo para comenzar la práctica'
+      : 'Rotate your device to start practicing';
+  String get closeLesson => isSpanish ? 'Cerrar lección' : 'Close lesson';
+  String get moreControls => isSpanish ? 'Más controles' : 'More controls';
+  String get retry => isSpanish ? 'REINTENTAR' : 'TRY AGAIN';
+
+  String lessonProgressValue(int completed, int total) =>
+      isSpanish ? '$completed de $total objetivos' : '$completed of $total goals';
+
+  String lessonError(String code) {
+    return switch (code) {
+      'lessonNotFound' => isSpanish
+          ? 'No se encontró la lección.'
+          : 'The lesson could not be found.',
+      'audioPermissionDenied' => isSpanish
+          ? 'Activa el permiso del micrófono para continuar.'
+          : 'Enable microphone permission to continue.',
+      'performanceAnalyzerUnavailable' => isSpanish
+          ? 'El reconocimiento de sonido no está disponible.'
+          : 'Sound recognition is unavailable.',
+      'lessonClockFailure' => isSpanish
+          ? 'El reloj de la lección se ha detenido.'
+          : 'The lesson clock has stopped.',
+      _ => isSpanish
+          ? 'No se pudo continuar con la lección.'
+          : 'The lesson could not continue.',
+    };
+  }
+
+  String get fretboardIdle =>
+      isSpanish ? 'Selecciona una lección' : 'Select a lesson';
+  String get fretboardReady =>
+      isSpanish ? 'Listo para practicar' : 'Ready to practice';
+  String get fretboardCountIn =>
+      isSpanish ? 'Cuenta de entrada' : 'Count in';
+  String get fretboardRunning =>
+      isSpanish ? 'Sigue el mástil' : 'Follow the fretboard';
+  String get fretboardWaitingNote =>
+      isSpanish ? 'Esperando nota' : 'Waiting for note';
+  String get fretboardWaitingChord =>
+      isSpanish ? 'Esperando acorde' : 'Waiting for chord';
+  String get fretboardValidating =>
+      isSpanish ? 'Validando sonido' : 'Checking sound';
+  String get fretboardSuccess =>
+      isSpanish ? 'Objetivo correcto' : 'Target complete';
+  String get fretboardReentry =>
+      isSpanish ? 'Reentrada: 1' : 'Re-entry: 1';
+  String get fretboardPaused => isSpanish ? 'Pausa' : 'Paused';
+  String get fretboardCompleted =>
+      isSpanish ? 'Lección completada' : 'Lesson completed';
+  String get fretboardFailure => isSpanish
+      ? 'No se pudo continuar. Inténtalo de nuevo'
+      : 'Unable to continue. Try again';
+  String get fretboardSixStrings => isSpanish
+      ? 'Seis cuerdas, de 6 a 1'
+      : 'Six strings, from 6 to 1';
+  String get fretboardChord => isSpanish ? 'Acorde' : 'Chord';
+  String get fretboardString => isSpanish ? 'Cuerda' : 'String';
+  String get fretboardFret => isSpanish ? 'traste' : 'fret';
+  String get fretboardNote => isSpanish ? 'nota' : 'note';
+  String get fretboardCurrentTarget =>
+      isSpanish ? 'objetivo actual' : 'current target';
+
+  List<String> get pitchClassNames => isSpanish
+      ? const <String>[
+          'Do', 'Do sostenido', 'Re', 'Re sostenido', 'Mi', 'Fa',
+          'Fa sostenido', 'Sol', 'Sol sostenido', 'La', 'La sostenido', 'Si',
+        ]
+      : const <String>[
+          'C', 'C sharp', 'D', 'D sharp', 'E', 'F',
+          'F sharp', 'G', 'G sharp', 'A', 'A sharp', 'B',
+        ];
 
   String localizeError(String message) {
     final translations = isSpanish ? _spanishErrors : _englishErrors;

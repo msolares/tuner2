@@ -49,3 +49,5 @@ Implementar exactamente las entidades, value objects, errores y puertos cerrados
 - `git diff --check`: limpio.
 - Rust/FFI no se modifico; `cargo test` no aplica a T057.
 - `TunerEngine` y `MetronomeEngine` permanecen sin cambios.
+- Contrato `LessonClock.start` completado en T066 con `tempoMap`: era necesario
+  para convertir tiempo monotónico a los ticks del chart sin asumir BPM fijo.

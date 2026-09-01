@@ -67,3 +67,5 @@ Implementar UC-L00..UC-L10 y una maquina de estados determinista, pura y comprob
 - Test de arquitectura confirma que Domain no importa Flutter, data, XML, FFI,
   plugins, presentation ni app. Data, Presentation, App y Rust no se tocaron;
   `TunerEngine` y `MetronomeEngine` permanecen sin cambios.
+- T066 completa la llamada UC-L03/UC-L08 pasando el `tempoMap` inmutable del
+  chart a `LessonClock.start`; no cambia la maquina de estados de esta task.

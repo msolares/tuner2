@@ -98,6 +98,7 @@ void main() {
 
       await harness.controller.start();
       expect(harness.clock.startedAt, -3840);
+      expect(harness.clock.startedTempoMap, harness.controller.state.chart.tempoMap);
       expect(harness.controller.state.status, LessonSessionStatus.countIn);
 
       await harness.tick(-1, 90);
@@ -431,6 +432,7 @@ final class _FakeClock implements LessonClock {
   int startCalls = 0;
   int pauseCalls = 0;
   int stopCalls = 0;
+  List<TempoPoint>? startedTempoMap;
   final seeks = <int>[];
   final speeds = <double>[];
 
@@ -447,9 +449,14 @@ final class _FakeClock implements LessonClock {
   Future<void> setSpeed(double speed) async => speeds.add(speed);
 
   @override
-  Future<void> start({required int initialTick, required double speed}) async {
+  Future<void> start({
+    required int initialTick,
+    required double speed,
+    required List<TempoPoint> tempoMap,
+  }) async {
     startCalls++;
     startedAt = initialTick;
+    startedTempoMap = List.unmodifiable(tempoMap);
     if (startError != null) throw startError!;
   }
 

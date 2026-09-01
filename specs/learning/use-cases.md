@@ -48,7 +48,8 @@ Estos casos de uso son la unica entrada de presentation al comportamiento educat
 
 **Precondicion:** estado `ready` o `completed` reiniciado.
 
-**Efectos:** solicitar permiso, iniciar `PerformanceAnalyzer`, fijar primer target, iniciar `LessonClock` en `countIn`.
+**Efectos:** solicitar permiso, iniciar `PerformanceAnalyzer`, fijar primer target,
+iniciar `LessonClock` en `countIn` con el `tempoMap` inmutable del chart.
 
 **Cuenta atras:** un compas completo segun el meter vigente en el tick inicial, calculado como `numerator * (4 / denominator) * 960` ticks. El clock comienza en `sectionStart - countInTicks`; los ticks negativos son validos solo como posicion transitoria de cuenta. Durante `countIn` no se evalua microfono y E08 no reproduce sonido. Al alcanzar `sectionStart` pasa a `running`.
 

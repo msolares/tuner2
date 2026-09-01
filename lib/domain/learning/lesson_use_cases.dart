@@ -145,7 +145,11 @@ final class LessonSessionController {
       final initialTick = _state.section.startTick - countInTicks;
       _countInEndTick = _state.section.startTick;
       _countInResumeStatus = LessonSessionStatus.running;
-      await _clock.start(initialTick: initialTick, speed: _state.speed);
+      await _clock.start(
+        initialTick: initialTick,
+        speed: _state.speed,
+        tempoMap: _state.chart.tempoMap,
+      );
       _state = _state.copyWith(
         status: LessonSessionStatus.countIn,
         positionTicks: initialTick.toDouble(),
@@ -490,7 +494,11 @@ final class LessonSessionController {
       _countInResumeStatus = LessonSessionStatus.running;
       await _analyzer.setTarget(_targetFor(firstTarget));
       if (mustStartClock) {
-        await _clock.start(initialTick: initialTick, speed: _state.speed);
+        await _clock.start(
+          initialTick: initialTick,
+          speed: _state.speed,
+          tempoMap: _state.chart.tempoMap,
+        );
       } else {
         await _clock.seek(initialTick);
         await _clock.resume();

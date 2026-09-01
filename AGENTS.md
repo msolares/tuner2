@@ -65,6 +65,8 @@ Arquitectura obligatoria: Flutter + Rust FFI, con implementacion Web en Dart baj
 
 - El reloj musical, nunca el repaint, gobierna la sesion.
 - El chart usa ticks enteros; presentation puede interpolar, pero no acumula tiempo de dominio.
+- `LessonClock` recibe el `tempoMap` del chart al iniciar y deriva desde el tiempo
+  monotónico objetivos absolutos; ningun adaptador presupone un BPM fijo.
 - El painter recibe un render model inmutable y no accede a BLoC, streams, XML o engines.
 - DSP y parseo nunca se ejecutan en el hilo/frame de UI.
 

@@ -3,14 +3,14 @@
 ## Punto de reanudacion
 
 - Rama: `aprendizaje-musical`.
-- Ultimo bloque cerrado: T065 - PerformanceAnalyzer Web equivalente (`done`,
+- Ultimo bloque cerrado: T069 - pantalla responsive del modo educativo (`done`,
   validacion incremental diferida por decision del propietario).
 - T062 permanece `in_progress` por el corpus PCM real aplazado por autorizacion
   explicita del propietario para probar primero la app sin musica.
 - T022 permanece `todo` por validacion fisica Android/iOS aplazada de forma
   explicita; no invalida el cierre tecnico de T064.
-- Siguiente task: T066 - clock de practica monotonico.
-- Estado esperado del worktree al reanudar: cambios acumulados de T058..T061 sin
+- Siguiente task: T070 - integracion de cuenta, espera, reentrada y velocidad.
+- Estado esperado del worktree al reanudar: cambios acumulados de T058..T068 sin
   commit; comprobar siempre con `git status --short` y preservar cualquier cambio
   ajeno.
 
@@ -42,6 +42,28 @@
 - Implementado el adaptador Web y su kernel Dart para evidencia dirigida de nota
   y acorde, con chroma C..B, onset, ventana fija, procesamiento cooperativo y
   backlog de un frame.
+- Completado el contrato del clock con el `tempoMap` del chart e implementado un
+  scheduler Dart monotónico comun para movil/Web, basado en objetivos absolutos,
+  junto con un fake determinista reutilizable.
+- Implementado `LessonBloc` con eventos serializados, estado UI derivado de
+  `LessonSessionState`, delegacion completa a casos de uso y cancelacion de
+  clock/analyzer en stop, errores, lifecycle, recarga y dispose.
+- Implementado el mapper/render model acotado a 40 bloques y el painter de mastil
+  con seis cuerdas, perspectiva, estados, `RepaintBoundary`, semantica y fallback
+  vertical. Los cuatro goldens estan definidos pero sus PNG/revision quedan
+  pendientes de la ejecucion manual diferida.
+- Implementada la pantalla educativa horizontal responsive con jerarquia
+  completa, controles, progreso/compas/velocidad/microfono, estados textuales,
+  diagrama de acorde y evidencia cromatica cruda. La pantalla localiza ES/EN,
+  respeta reduce motion, sustituye gameplay en vertical y solicita stop antes
+  de salir o disponer recursos.
+- `LessonBlocState` conserva solo la observacion cruda valida del target actual
+  para feedback visual, sin trasladar umbrales ni decisiones pedagogicas a
+  Presentation; se limpia al reiniciar, detener, repetir, cambiar target o
+  fallar.
+- Escritos tests T069 para arquitectura, BLoC/evidencia, estados, controles,
+  ES/EN, lifecycle, tamaños normativos y tres goldens; no se ejecutaron ni se
+  generaron PNG por la politica de validacion diferida.
 - Desde T065 rige la validacion diferida solicitada por el propietario: los
   agentes escriben tests y entregan comandos, pero no los ejecutan por task; un
   fallo posterior reabre la task.
@@ -67,16 +89,18 @@
 1. Leer `AGENTS.md` y este handoff.
 2. Aplicar, en orden, `$project-clean-architecture`, `$spec-task-executor` y
    `$guitar-learning-mode`.
-3. Iniciar T066 e implementar el clock de practica monotonico; escribir sus
-   tests sin ejecutar gates y entregar los comandos al propietario.
+3. Iniciar T070 e integrar extremo a extremo cuenta visual, espera, acierto,
+   reentrada, velocidad, repeticion/final y telemetria local en memoria; escribir
+   sus tests sin ejecutar gates y entregar los comandos al propietario.
 4. Mantener T022 y T062 en la lista de pendientes externos para recuperarlos en
    la auditoria final antes de declarar validacion real completa.
 
 ## Limites del siguiente bloque
 
-- T062 no implementa FFI, Dart, UI, scoring ni clasificacion libre de acordes.
-- Preservar sin cambios el ABI y los resultados del afinador monofonico.
-- Aplicar `$guitar-learning-mode` con la ruta DSP/chords y ejecutar `cargo test`.
-- No generar tonos sinteticos y presentarlos como corpus real; el aplazamiento
-  de T062 no equivale a cerrar sus gates.
+- T070 integra contratos ya implementados; no introduce audio real, persistencia
+  remota ni scoring competitivo.
+- La cuenta E08 es exclusivamente visual y el clock musical sigue siendo la
+  autoridad temporal.
+- La telemetria de intentos/precision queda solo en memoria y no inventa
+  progreso de usuario.
 - No iniciar E09 ni tareas dependientes antes de cerrar T072.

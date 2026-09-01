@@ -29,7 +29,11 @@ void main() {
         await analyzer.observations().first, isA<NotePerformanceObservation>());
     await analyzer.stop();
 
-    await clock.start(initialTick: -960, speed: 0.7);
+    await clock.start(
+      initialTick: -960,
+      speed: 0.7,
+      tempoMap: [TempoPoint(tick: 0, bpm: 70)],
+    );
     expect(await clock.ticks().first, isA<LessonClockTick>());
     await clock.pause();
     await clock.resume();
@@ -107,7 +111,11 @@ final class _FakeClock implements LessonClock {
   Future<void> setSpeed(double speed) async {}
 
   @override
-  Future<void> start({required int initialTick, required double speed}) async {}
+  Future<void> start({
+    required int initialTick,
+    required double speed,
+    required List<TempoPoint> tempoMap,
+  }) async {}
 
   @override
   Future<void> stop() async {}

@@ -284,7 +284,11 @@ final class LessonClockTick {
 }
 
 abstract interface class LessonClock {
-  Future<void> start({required int initialTick, required double speed});
+  Future<void> start({
+    required int initialTick,
+    required double speed,
+    required List<TempoPoint> tempoMap,
+  });
   Future<void> pause();
   Future<void> resume();
   Future<void> seek(int tick);
@@ -296,6 +300,8 @@ abstract interface class LessonClock {
 
 - Constantes de velocidad E08: `lessonMinSpeed = 0.50`, `lessonMaxSpeed = 1.00`, `lessonSpeedStep = 0.05` y `lessonDefaultSpeed = 0.70`.
 - E08 no produce audio; `LessonClock` solo gobierna tiempo musical y cuenta visual.
+- `tempoMap` es la fuente para convertir tiempo monotónico a ticks; comienza en
+  tick 0, se copia al iniciar y sus cambios se aplican al alcanzar su tick.
 - El clock usa objetivos monotónicos absolutos; no acumula deltas de callbacks.
 - El repaint interpola, pero nunca incrementa la posicion de dominio.
 - `LessonClockTick.positionTicks` es finito y puede ser negativo solo para cuenta/reentrada transitoria; `monotonicTimestampMs >= 0`.

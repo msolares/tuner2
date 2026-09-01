@@ -26,7 +26,11 @@ abstract interface class PerformanceAnalyzer {
 }
 
 abstract interface class LessonClock {
-  Future<void> start({required int initialTick, required double speed});
+  Future<void> start({
+    required int initialTick,
+    required double speed,
+    required List<TempoPoint> tempoMap,
+  });
 
   Future<void> pause();
 

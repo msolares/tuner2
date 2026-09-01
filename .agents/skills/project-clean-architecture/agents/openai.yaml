@@ -1,0 +1,7 @@
+interface:
+  display_name: "Project Clean Architecture"
+  short_description: "Protege capas, contratos y dependencias del proyecto"
+  default_prompt: "Usa $project-clean-architecture para revisar este cambio antes de implementarlo."
+
+policy:
+  allow_implicit_invocation: true

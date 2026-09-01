@@ -17,7 +17,7 @@ class AudioplayersMetronomeAudioSink implements MetronomeAudioSink {
       return;
     }
     final directory =
-        await Directory.systemTemp.createTemp('weband-metronome-');
+        await Directory.systemTemp.createTemp('afinador-metronome-');
     _tempDirectory = directory;
     final strongFile =
         File('${directory.path}${Platform.pathSeparator}strong.wav');

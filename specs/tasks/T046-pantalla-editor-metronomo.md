@@ -16,7 +16,7 @@
 Construir la pantalla de metrónomo y el editor por tiempo con la identidad visual existente y comportamiento responsive.
 
 ## Entradas
-- `lib/app/we_band_theme.dart`
+- `lib/app/app_theme.dart`
 - `specs/epics/E07-metronomo.md`
 - `lib/presentation/`
 

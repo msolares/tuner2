@@ -13,10 +13,10 @@
 - T055
 
 ## Objetivo
-Crear una rama independiente que conserve toda la funcionalidad actual del afinador y el metronomo, recuperando la identidad visual azul y verde anterior al rediseño WeBand.
+Crear una rama independiente que conserve toda la funcionalidad actual del afinador y el metronomo, recuperando la identidad visual azul y verde anterior al rediseño vigente.
 
 ## Alcance
-- Trabajar en una rama y un worktree separados sin modificar `weband-aperence`.
+- Trabajar en una rama y un worktree separados sin modificar la rama de apariencia original.
 - Mantener motores, contratos, BLoC, audio, presets, metronomo, localizacion ES/EN y version `1.0.5+9`.
 - Recuperar fondo azul, superficies, tipografia de sistema y acentos azul/verde de la apariencia anterior.
 - Recuperar la composicion anterior del afinador y adaptar a ella el selector superior de preset.
@@ -39,7 +39,7 @@ Crear una rama independiente que conserve toda la funcionalidad actual del afina
 
 ## Evidencia de cierre
 - Rama creada: `codex/funcionalidad-actual-apariencia-anterior` en el worktree separado `C:\Marcos\Apps\afinador-functional-old-ui`.
-- La rama original `weband-aperence` se mantuvo activa y sin modificaciones derivadas de esta variante.
+- La rama de apariencia original se mantuvo activa y sin modificaciones derivadas de esta variante.
 - Se traslado el estado funcional actual: motores, audio, BLoC, cinco presets, metronomo, localizacion ES/EN y version `1.0.5+9`.
 - Afinador recuperado con composicion, fondo azul, superficies y acentos azul/verde de la apariencia anterior.
 - Selector superior conservado con sus cinco presets, marca activa, limpieza de resultado por cancion y soporte responsive a 320 px.

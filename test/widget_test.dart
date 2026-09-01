@@ -6,7 +6,7 @@ import 'package:afinador/presentation/screens/metronome_screen.dart';
 import 'package:afinador/presentation/screens/tuner_screen.dart';
 
 void main() {
-  testWidgets('renderiza shell principal WeBand', (WidgetTester tester) async {
+  testWidgets('renderiza shell principal', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
     expect(find.byType(TunerScreen), findsOneWidget);

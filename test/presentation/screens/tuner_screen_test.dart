@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:afinador/app/we_band_theme.dart';
+import 'package:afinador/app/app_theme.dart';
 import 'package:afinador/data/settings/default_instrument_preset_catalog.dart';
 import 'package:afinador/domain/entities/guitar_tuning.dart';
 import 'package:afinador/domain/entities/instrument_preset_profile.dart';
@@ -228,7 +228,7 @@ class _TestHarness {
 
   Widget build() {
     return MaterialApp(
-      theme: WeBandTheme.theme(),
+      theme: AppTheme.theme(),
       home: MultiBlocProvider(
         providers: [
           BlocProvider<TunerBloc>.value(value: tunerBloc),

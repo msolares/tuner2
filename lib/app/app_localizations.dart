@@ -25,7 +25,7 @@ class AppLocalizations {
 
   bool get isSpanish => locale.languageCode.toLowerCase() == 'es';
 
-  String get appTitle => isSpanish ? 'Afinador WeBand' : 'WeBand Tuner';
+  String get appTitle => isSpanish ? 'Afinador' : 'Guitar Tuner';
   String get tuner => isSpanish ? 'AFINADOR' : 'TUNER';
   String get metronome => isSpanish ? 'METRÓNOMO' : 'METRONOME';
 

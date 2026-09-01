@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class WeBandTheme {
-  WeBandTheme._();
+class AppTheme {
+  AppTheme._();
 
   static const Color background = Color(0xFF04111D);
   static const Color backgroundElevated = Color(0xFF071A2A);

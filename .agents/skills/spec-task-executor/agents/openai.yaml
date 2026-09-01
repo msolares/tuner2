@@ -1,0 +1,7 @@
+interface:
+  display_name: "Spec Task Executor"
+  short_description: "Ejecuta una task con alcance y evidencia estrictos"
+  default_prompt: "Usa $spec-task-executor para implementar la task indicada sin ampliar su alcance."
+
+policy:
+  allow_implicit_invocation: true

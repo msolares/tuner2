@@ -1,0 +1,7 @@
+interface:
+  display_name: "Guitar Learning Mode"
+  short_description: "Guía MusicXML, acordes, mástil y sesión educativa"
+  default_prompt: "Usa $guitar-learning-mode para trabajar en el modo educativo respetando E08/E09."
+
+policy:
+  allow_implicit_invocation: true

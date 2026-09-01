@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../app/app_localizations.dart';
-import '../../app/we_band_theme.dart';
+import '../../app/app_theme.dart';
 import '../bloc/metronome_bloc.dart';
 import '../bloc/metronome_event.dart';
 import '../bloc/tuner_bloc.dart';
@@ -56,7 +56,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: WeBandTheme.background,
+      backgroundColor: AppTheme.background,
       body: IndexedStack(
         index: _selectedIndex,
         children: const [
@@ -92,7 +92,7 @@ class _AppBottomNavigation extends StatelessWidget {
           end: Alignment.bottomCenter,
           colors: [Color(0xFF11293E), Color(0xFF0A1D2D)],
         ),
-        border: Border(top: BorderSide(color: WeBandTheme.outlineMuted)),
+        border: Border(top: BorderSide(color: AppTheme.outlineMuted)),
       ),
       child: SafeArea(
         top: false,
@@ -136,7 +136,7 @@ class _NavigationDestination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? WeBandTheme.tuneBlue : WeBandTheme.textSecondary;
+    final color = active ? AppTheme.tuneBlue : AppTheme.textSecondary;
     return Semantics(
       button: true,
       selected: active,
@@ -154,7 +154,7 @@ class _NavigationDestination extends StatelessWidget {
                 height: 34,
                 decoration: BoxDecoration(
                   color: active
-                      ? WeBandTheme.tuneBlue.withValues(alpha: 0.16)
+                      ? AppTheme.tuneBlue.withValues(alpha: 0.16)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                 ),

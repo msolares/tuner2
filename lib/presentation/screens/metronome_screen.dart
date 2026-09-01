@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../app/app_localizations.dart';
-import '../../app/we_band_theme.dart';
+import '../../app/app_theme.dart';
 import '../../domain/entities/metronome_settings.dart';
 import '../../domain/entities/time_signature.dart';
 import '../../domain/services/time_signature_catalog.dart';
@@ -27,7 +27,7 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
         final settings = state.settings;
         final selectedBeat = _selectedBeat.clamp(0, settings.beats.length - 1);
         return Scaffold(
-          backgroundColor: WeBandTheme.background,
+          backgroundColor: AppTheme.background,
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           floatingActionButton: FloatingActionButton.large(
             key: const ValueKey('metronome-primary-action'),
@@ -199,12 +199,12 @@ class _Header extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              color: WeBandTheme.surfaceStrong.withValues(alpha: 0.88),
-              border: Border.all(color: WeBandTheme.outline),
+              color: AppTheme.surfaceStrong.withValues(alpha: 0.88),
+              border: Border.all(color: AppTheme.outline),
             ),
             child: const Icon(
               Icons.timer_outlined,
-              color: WeBandTheme.tuneBlue,
+              color: AppTheme.tuneBlue,
               size: 30,
             ),
           ),
@@ -216,14 +216,14 @@ class _Header extends StatelessWidget {
                 Text(
                   l10n.metronome,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: WeBandTheme.textPrimary,
+                        color: AppTheme.textPrimary,
                         letterSpacing: 1.2,
                       ),
                 ),
                 Text(
                   isPlaying ? l10n.playingPattern : l10n.readyToPractice,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: WeBandTheme.textSecondary,
+                        color: AppTheme.textSecondary,
                       ),
                 ),
               ],
@@ -232,18 +232,14 @@ class _Header extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: (isPlaying
-                      ? WeBandTheme.tuneGreen
-                      : WeBandTheme.surfaceStrong)
+              color: (isPlaying ? AppTheme.tuneGreen : AppTheme.surfaceStrong)
                   .withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               isPlaying ? l10n.playing : l10n.ready,
               style: TextStyle(
-                color: isPlaying
-                    ? WeBandTheme.tuneGreen
-                    : WeBandTheme.textSecondary,
+                color: isPlaying ? AppTheme.tuneGreen : AppTheme.textSecondary,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -271,7 +267,7 @@ class _TempoCard extends StatelessWidget {
           Text(
             l10n.tempo,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: WeBandTheme.textMuted,
+                  color: AppTheme.textMuted,
                   letterSpacing: 1.8,
                 ),
           ),
@@ -294,7 +290,7 @@ class _TempoCard extends StatelessWidget {
                       '$bpm',
                       key: const ValueKey('metronome-bpm'),
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            color: WeBandTheme.textPrimary,
+                            color: AppTheme.textPrimary,
                             fontSize: 92,
                             height: 1,
                           ),
@@ -314,7 +310,7 @@ class _TempoCard extends StatelessWidget {
           Text(
             'BPM',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: WeBandTheme.brandRed,
+                  color: AppTheme.brandRed,
                   letterSpacing: 1.4,
                 ),
           ),
@@ -367,7 +363,7 @@ class _SignatureCard extends StatelessWidget {
           Text(
             l10n.timeSignature,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: WeBandTheme.textPrimary,
+                  color: AppTheme.textPrimary,
                   letterSpacing: 1,
                 ),
           ),
@@ -453,7 +449,7 @@ class _BeatSequence extends StatelessWidget {
           Text(
             l10n.measurePattern,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: WeBandTheme.textPrimary,
+                  color: AppTheme.textPrimary,
                   letterSpacing: 1,
                 ),
           ),
@@ -511,10 +507,10 @@ class _BeatTile extends StatelessWidget {
     final isStrong = beat.accent == BeatAccent.strong;
     final isMuted = beat.accent == BeatAccent.muted;
     final borderColor = active
-        ? WeBandTheme.tuneGreen
+        ? AppTheme.tuneGreen
         : selected
-            ? WeBandTheme.brandRed
-            : WeBandTheme.outline;
+            ? AppTheme.brandRed
+            : AppTheme.outline;
     return Semantics(
       button: true,
       selected: selected,
@@ -534,8 +530,8 @@ class _BeatTile extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: active
-                ? WeBandTheme.tuneGreen.withValues(alpha: 0.16)
-                : WeBandTheme.surfaceStrong,
+                ? AppTheme.tuneGreen.withValues(alpha: 0.16)
+                : AppTheme.surfaceStrong,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: borderColor, width: active ? 2 : 1),
           ),
@@ -548,7 +544,7 @@ class _BeatTile extends StatelessWidget {
                   Text(
                     '${index + 1}',
                     style: const TextStyle(
-                      color: WeBandTheme.textSecondary,
+                      color: AppTheme.textSecondary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -559,8 +555,7 @@ class _BeatTile extends StatelessWidget {
                             ? Icons.volume_off_rounded
                             : Icons.circle,
                     size: isStrong ? 20 : 13,
-                    color:
-                        isStrong ? WeBandTheme.brandRed : WeBandTheme.textMuted,
+                    color: isStrong ? AppTheme.brandRed : AppTheme.textMuted,
                   ),
                 ],
               ),
@@ -568,8 +563,7 @@ class _BeatTile extends StatelessWidget {
                 _figureSymbol(beat.subdivision, denominator),
                 style: TextStyle(
                   fontSize: 28,
-                  color:
-                      isMuted ? WeBandTheme.textMuted : WeBandTheme.textPrimary,
+                  color: isMuted ? AppTheme.textMuted : AppTheme.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -584,8 +578,8 @@ class _BeatTile extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: activeSubdivision == pulse
-                            ? WeBandTheme.tuneGreen
-                            : WeBandTheme.outlineMuted,
+                            ? AppTheme.tuneGreen
+                            : AppTheme.outlineMuted,
                       ),
                     ),
                 ],
@@ -624,7 +618,7 @@ class _BeatEditor extends StatelessWidget {
           Text(
             l10n.beat(beatIndex + 1),
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: WeBandTheme.textPrimary,
+                  color: AppTheme.textPrimary,
                 ),
           ),
           const SizedBox(height: 12),
@@ -657,7 +651,7 @@ class _BeatEditor extends StatelessWidget {
           Text(
             l10n.figureSubdivision,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: WeBandTheme.textSecondary,
+                  color: AppTheme.textSecondary,
                   letterSpacing: 1,
                 ),
           ),
@@ -695,15 +689,15 @@ class _ErrorBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: WeBandTheme.danger.withValues(alpha: 0.12),
+        color: AppTheme.danger.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: WeBandTheme.danger.withValues(alpha: 0.35),
+          color: AppTheme.danger.withValues(alpha: 0.35),
         ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: WeBandTheme.danger),
+          const Icon(Icons.error_outline_rounded, color: AppTheme.danger),
           const SizedBox(width: 10),
           Expanded(child: Text(l10n.localizeError(message))),
         ],
@@ -750,9 +744,9 @@ String _figureSymbol(BeatSubdivision subdivision, int denominator) {
 
 BoxDecoration _cardDecoration() {
   return BoxDecoration(
-    color: WeBandTheme.surface.withValues(alpha: 0.86),
+    color: AppTheme.surface.withValues(alpha: 0.86),
     borderRadius: BorderRadius.circular(28),
-    border: Border.all(color: WeBandTheme.outline),
+    border: Border.all(color: AppTheme.outline),
     boxShadow: const [
       BoxShadow(
         color: Color(0x22000000),

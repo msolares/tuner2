@@ -4,7 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app/app_localizations.dart';
 import 'app/platform_dependencies.dart';
-import 'app/we_band_theme.dart';
+import 'app/app_theme.dart';
 import 'data/song_tuning/openai_song_tuning_config.dart';
 import 'data/song_tuning/openai_song_tuning_service.dart';
 import 'data/settings/default_instrument_preset_catalog.dart';
@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       localeResolutionCallback: resolveAppLocale,
-      theme: WeBandTheme.theme(),
+      theme: AppTheme.theme(),
       home: MultiBlocProvider(
         providers: [
           BlocProvider(

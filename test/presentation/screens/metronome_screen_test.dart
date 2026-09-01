@@ -1,4 +1,4 @@
-import 'package:afinador/app/we_band_theme.dart';
+import 'package:afinador/app/app_theme.dart';
 import 'package:afinador/app/app_localizations.dart';
 import 'package:afinador/domain/entities/metronome_settings.dart';
 import 'package:afinador/domain/entities/metronome_tick.dart';
@@ -34,7 +34,7 @@ void main() {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        theme: WeBandTheme.theme(),
+        theme: AppTheme.theme(),
         home: BlocProvider.value(
           value: bloc,
           child: const MetronomeScreen(),

@@ -161,7 +161,7 @@ El BLoC depende solo de `MetronomeEngine` y `MetronomeSettingsStore` del dominio
 - Start/stop repetido debe ser idempotente y no duplicar streams, schedulers ni handles.
 
 ## UX de la pantalla
-- Cabecera consistente con la identidad visual de WeBand.
+- Cabecera consistente con la identidad visual vigente del proyecto.
 - BPM como dato principal, con botones `-`/`+`, deslizador y `TAP`.
 - Selector de compás con presets y editor personalizado.
 - Secuencia horizontal/adaptativa de tiempos numerados.

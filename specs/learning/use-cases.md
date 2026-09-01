@@ -76,7 +76,11 @@ Estos casos de uso son la unica entrada de presentation al comportamiento educat
 
 **Acorde:** abrir una ventana desde el primer ataque valido, acumular maximos por clase tonal y evaluar al cumplir condiciones o expirar la ventana. Si expira sin acierto vuelve a `waitingForTarget` con intento incrementado.
 
-**Acierto:** registrar resultado, entrar en `successFeedback` durante 250 ms visuales y ejecutar UC-L06.
+**Acierto:** registrar resultado y entrar en `successFeedback` durante 250 ms
+monotonicos. Mientras la posicion musical permanece congelada, UC-L04 puede recibir
+ticks tardios exclusivamente para comprobar ese plazo por
+`monotonicTimestampMs`; el primer tick que alcanza el limite ejecuta UC-L06 sin
+avanzar la posicion.
 
 **Fallo:** mantener la sesion detenida; emitir feedback diagnostico sin marcar el evento como completado.
 
@@ -99,7 +103,7 @@ E09 sustituye el clock por la posicion del audio, pero conserva esta semantica.
 
 **Entrada:** velocidad en pasos de 0.05.
 
-**Estados validos:** `ready`, `running`, `waitingForTarget`, `paused`.
+**Estados validos:** `ready`, `countIn`, `running`, `waitingForTarget`, `paused`.
 
 **Reglas:** actualizar dominio y clock atomicamente; mantener el mismo tick musical; rechazar valores fuera de rango. El pitch esperado no cambia.
 

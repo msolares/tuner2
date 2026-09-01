@@ -42,6 +42,7 @@ dependencies:
   http: ^1.2.2
   audioplayers: ^6.7.1
   web: ^1.1.1
+  xml: ^6.4.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -71,6 +72,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - docs/partituras/pentatonica-menor-la-posicion-1.musicxml
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

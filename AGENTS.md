@@ -140,9 +140,14 @@ Invariantes globales:
 4. Leer las specs enlazadas en `## Entradas` y la skill aplicable.
 5. Marcar la task `in_progress` antes de implementar.
 6. Implementar solo el alcance de la task.
-7. Ejecutar gates relacionados y el conjunto completo exigido por la task.
-8. Registrar evidencia verificable en la task.
-9. Marcar task como `done` solo sin decisiones abiertas.
+7. Escribir los tests y preparar los comandos de validacion relacionados, sin
+   ejecutarlos durante el desarrollo incremental salvo peticion expresa del
+   propietario.
+8. Registrar en la task la evidencia implementada y los comandos pendientes de
+   ejecucion por el propietario.
+9. Marcar task como `done` cuando alcance y tests esten implementados, aunque la
+   ejecucion de gates quede diferida y declarada; si un gate posterior falla, la
+   task se reabre como `in_progress`.
 10. Al cerrar un bloque o antes de cambiar de ventana, actualizar `specs/handoffs/current.md`.
 
 ## 5) Reglas de ejecucion por task
@@ -166,6 +171,21 @@ Invariantes globales:
 - `git diff --check` limpio.
 - Tests de arquitectura/imports para capas nuevas.
 - Conformidad movil/Web cuando se implementa un mismo puerto.
+
+### Validacion diferida durante el desarrollo
+
+- Por decision del propietario, los agentes no ejecutan por task `flutter test`,
+  `flutter analyze`, `flutter build`, `dart test`, `cargo test`, `cargo clippy` ni
+  gates equivalentes, salvo solicitud explicita.
+- Los tests se implementan en la misma task y los comandos exactos se entregan
+  al propietario al cerrarla.
+- Una task puede quedar `done` con validacion declarada como pendiente; nunca se
+  presenta un comando no ejecutado como evidencia superada.
+- Cualquier fallo comunicado por el propietario reabre la task afectada antes
+  de continuar con cambios dependientes que pudieran ocultarlo.
+- Antes del cierre de epic, integracion o release se ejecuta el conjunto completo
+  de gates y evidencias oficiales; esta politica aplaza validacion, no elimina
+  criterios de calidad.
 
 ### Escenarios obligatorios de producto
 - Nota sostenida estable.
@@ -232,9 +252,11 @@ Si dos fuentes discrepan, no se elige una interpretacion: se detiene la task y s
 
 ### Protocolo de cierre por task
 1. Implementar alcance exacto.
-2. Registrar evidencia en `## Evidencia de cierre`.
-3. Marcar `## Estado` en `done`.
-4. No dejar decisiones abiertas en la task.
+2. Registrar evidencia y comandos de validacion pendientes en
+   `## Evidencia de cierre`.
+3. Marcar `## Estado` en `done` cuando implementacion y tests esten completos.
+4. No dejar decisiones de implementacion abiertas; una validacion diferida debe
+   quedar identificada como tal y reabre la task si falla.
 
 ## 12) Skills de repositorio
 

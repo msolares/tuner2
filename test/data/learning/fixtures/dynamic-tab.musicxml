@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="keys"><part-name>Keys</part-name></score-part>
+    <score-part id="lead"><part-name>Lead Guitar</part-name></score-part>
+  </part-list>
+  <part id="keys">
+    <measure number="1"><attributes><clef number="1"><sign>G</sign></clef></attributes></measure>
+  </part>
+  <part id="lead">
+    <measure number="intro">
+      <attributes>
+        <divisions>3</divisions>
+        <time><beats>6</beats><beat-type>8</beat-type></time>
+        <clef number="3"><sign>TAB</sign></clef>
+        <staff-details number="3">
+          <staff-lines>6</staff-lines>
+          <staff-tuning line="1"><tuning-step>E</tuning-step><tuning-octave>2</tuning-octave></staff-tuning>
+          <staff-tuning line="2"><tuning-step>A</tuning-step><tuning-octave>2</tuning-octave></staff-tuning>
+          <staff-tuning line="3"><tuning-step>D</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="4"><tuning-step>G</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="5"><tuning-step>B</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="6"><tuning-step>E</tuning-step><tuning-octave>4</tuning-octave></staff-tuning>
+          <capo>2</capo>
+        </staff-details>
+        <transpose number="3"><diatonic>1</diatonic><chromatic>2</chromatic></transpose>
+      </attributes>
+      <direction><direction-type><metronome><per-minute>90</per-minute></metronome></direction-type></direction>
+      <note>
+        <pitch><step>G</step><octave>2</octave></pitch><duration>2</duration><voice>9</voice><staff>3</staff>
+        <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
+        <tie type="start"/>
+        <notations><technical><string>6</string><fret>3</fret><hammer-on/><slide/><bend><bend-alter>1</bend-alter><pre-bend/><release/></bend><harmonic/><up-bow/><down-bow/></technical><tied type="start"/><tuplet number="2" type="start"/></notations>
+      </note>
+      <backup><duration>2</duration></backup>
+      <forward><duration>1</duration><voice>9</voice></forward>
+      <note><rest/><duration>1</duration><voice>9</voice><staff>3</staff></note>
+      <barline location="right"><ending number="1" type="start"/><repeat direction="backward" times="3"/></barline>
+    </measure>
+  </part>
+</score-partwise>

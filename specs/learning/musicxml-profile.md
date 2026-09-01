@@ -96,13 +96,16 @@ Para la parte `P1`:
 - Tempo 124 BPM.
 - Compas 1 en 2/4 y resto en 4/4.
 - Repeticion 2..81 dos veces.
-- 454 notas TAB con pitch y cuerda/traste coherentes.
+- 455 elementos de nota TAB con pitch y cuerda/traste coherentes: 454 ataques
+  (uno de los elementos es miembro `chord`).
 - 102 silencios, 5 grace notes y al menos un acorde simultaneo.
 - Trastes 0..22.
-- 436 eventos normalizados antes de navegacion y 872 eventos tras expandir la repeticion.
+- 437 eventos normalizados antes de navegacion y 874 eventos tras expandir la repeticion.
 - `totalTicks = 620160` despues de normalizar limites de compas y expandir navegacion.
 
-Estos valores son obligatorios para el perfil E08: 5 grace notes se ignoran, 12 segmentos `tie stop` se fusionan y 1 miembro `chord` se agrupa con su ataque simultaneo.
+Estos valores son obligatorios para el perfil E08: de los 455 elementos, 5 grace
+notes se ignoran, 1 miembro `chord` se agrupa con su ataque simultaneo y 12
+segmentos `tie stop` se fusionan (`455 - 5 - 1 - 12 = 437`).
 
 ## Resultado esperado de la primera clase
 

@@ -1,0 +1,10 @@
+# PCM mono f32 little-endian, 48000 Hz. Sin comas dentro de campos.
+file,expected,target_label,target_pitch_classes,guitar,intensity,attack_ms,category
+guitar-a/C-medium-01.pcm,positive,C,C|E|G,guitar-a,medium,100,clean
+guitar-b/Am-soft-01.pcm,positive,Am,A|C|E,guitar-b,soft,120,clean
+negatives/C-neighbor-01.pcm,negative,C,C|E|G,guitar-a,strong,100,neighboring_chord
+negatives/C-missing-01.pcm,negative,C,C|E|G,guitar-a,medium,100,missing_required_tone
+negatives/C-extra-substitution-01.pcm,negative,C,C|E|G,guitar-b,strong,100,extra_string_substitution
+negatives/C-note-01.pcm,negative,C,C|E|G,guitar-b,soft,100,isolated_note
+negatives/C-noise-01.pcm,negative,C,C|E|G,guitar-a,medium,100,noise
+negatives/C-voice-01.pcm,negative,C,C|E|G,guitar-b,medium,100,voice

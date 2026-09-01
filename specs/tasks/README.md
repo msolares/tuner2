@@ -35,6 +35,17 @@ T070 + T077 → T071
 (T060, T061, T062, T064, T065, T071) → T072
 ```
 
+Por decision del propietario, el corpus grabado pendiente mantiene T062
+`in_progress` pero no bloquea T063/T064: el DSP implementado y sus tests
+sinteticos si son prerequisito. T062 debe cerrarse con sus metricas reales antes
+de iniciar/cerrar T072.
+
+Por decision del propietario, la evidencia fisica Android/iOS pendiente mantiene
+T022 `todo` pero no bloquea el cierre de T064: `AudioFrameSource` y
+`RecorderAudioFrameSource` existen, y el adaptador movil tiene conformidad y
+lifecycle cubiertos con fakes. T022 debe recuperarse en la auditoria final antes
+de declarar validacion real de dispositivos.
+
 No iniciar E09 antes de cerrar T072:
 
 ```text

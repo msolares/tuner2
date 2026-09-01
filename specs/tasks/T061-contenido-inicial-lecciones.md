@@ -1,7 +1,7 @@
 # T061 - Catalogo y contenido inicial de lecciones
 
 ## Estado
-- todo
+- done
 
 ## Prioridad
 - P1
@@ -36,4 +36,31 @@ Crear el catalogo local y la primera clase MusicXML propia para validar el recor
 - El catalogo depende del puerto de dominio y no filtra rutas a UI.
 
 ## Evidencia de cierre
-- Pendiente.
+- Implementado `AssetLessonCatalog` en Data como adaptador de `LessonCatalog`,
+  con `AssetBundle` inyectado y asociacion privada entre el ID de dominio y el
+  asset MusicXML.
+- Metadata normativa publicada: ID `pentatonic-a-minor-position-1`, titulo
+  `Pentatonica menor de La`, subtitulo `Primera posicion · nota a nota`, indice
+  0, duracion estimada 3 y tipo `exercise`; ninguna ruta aparece en
+  `LessonSummary`.
+- El fixture propio existente se declara como asset en `pubspec.yaml` y se carga
+  como `LessonDocument` defensivo. ID desconocido produce `lessonNotFound` y un
+  fallo del bundle produce `lessonCatalogUnavailable`.
+- Integracion verificada mediante `ListLessonsUseCase`, `LoadLessonUseCase` y
+  `MusicXmlLessonChartDecoder`: 23 `LessonNoteEvent`, ningun acorde,
+  `totalTicks = 23040` y cero diagnosticos de importacion. Las invariantes del
+  chart validan pitch, cuerda y traste para todas las notas.
+- Tests nuevos cubren metadata/orden/inmutabilidad, ausencia de rutas, carga y
+  decodificacion por puertos, cero diagnosticos y errores tipados.
+- `dart format lib/data/learning/catalog test/data/learning/asset_lesson_catalog_test.dart`
+  -> limpio.
+- `flutter test test/data/learning/asset_lesson_catalog_test.dart` -> 4 pruebas
+  superadas; `flutter test test/data/learning` -> 23 superadas.
+- `flutter test` -> 173 pruebas superadas y 1 skip preexistente del harness de
+  `TunerEngine`.
+- `flutter analyze --no-fatal-infos` -> exit 0; 29 infos preexistentes fuera de
+  T061, sin errores, warnings ni infos nuevas.
+- `git diff --check` y busqueda de whitespace en archivos nuevos -> limpios.
+- Arquitectura preservada: Domain, Presentation, App, Rust/FFI y contratos
+  protegidos no se modificaron; Data depende del puerto de dominio y del bundle
+  de plataforma, sin importar Presentation/App/XML.

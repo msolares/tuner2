@@ -48,7 +48,9 @@ Corpus versionado con PCM mono a 48 kHz:
 - Am, Em y Dm.
 - Power chords en varias fundamentales.
 - Positivos por al menos dos guitarras y tres intensidades.
-- Negativos: acorde vecino, una nota ausente, cuerda extra, nota aislada, ruido y voz.
+- Negativos: acorde vecino, una nota requerida ausente, cuerda extra que sustituye
+  un tono requerido o convierte el voicing en acorde vecino, nota aislada, ruido y
+  voz. Una clase cromatica extra aislada no invalida por si sola un acorde E08.
 
 Gates iniciales:
 

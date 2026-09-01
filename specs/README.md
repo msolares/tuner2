@@ -17,6 +17,7 @@ Este directorio es la fuente de verdad para alcance, arquitectura y ejecución.
 - `specs/architecture/`: contratos transversales de capas y dependencias.
 - `specs/learning/`: contratos educativos, casos de uso y perfil MusicXML.
 - `specs/design/`: especificaciones visuales y referencias aprobadas.
+- `specs/handoffs/`: continuidad operativa entre ventanas de contexto.
 - `specs/quality/`: planes de prueba y gates.
 
 ## Convenciones

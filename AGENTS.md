@@ -143,6 +143,7 @@ Invariantes globales:
 7. Ejecutar gates relacionados y el conjunto completo exigido por la task.
 8. Registrar evidencia verificable en la task.
 9. Marcar task como `done` solo sin decisiones abiertas.
+10. Al cerrar un bloque o antes de cambiar de ventana, actualizar `specs/handoffs/current.md`.
 
 ## 5) Reglas de ejecucion por task
 - No abrir decisiones nuevas si la task ya las fija.
@@ -245,7 +246,15 @@ Codex descubre automaticamente las skills bajo `.agents/skills`:
 
 Si aplican varias, se usan en este orden: arquitectura, task, feature.
 
-## 13) Atajos prohibidos
+## 13) Continuidad entre ventanas
+
+- `specs/handoffs/current.md` es el punto de reanudacion operativo; no sustituye AGENTS, epics, specs ni tasks.
+- Al recibir `sigue con el desarrollo`, leer primero AGENTS y el handoff, comprobar rama/worktree y continuar la task indicada o iniciar la siguiente si la anterior esta `done`.
+- El handoff registra ultimo bloque cerrado, gates, deuda conocida, siguiente task, lecturas y skills obligatorias.
+- Actualizarlo al cerrar cada task, antes de una pausa prolongada o cuando cambie el siguiente paso.
+- Nunca declarar trabajo completo solo en el handoff: la evidencia y el estado oficial permanecen en la task.
+
+## 14) Atajos prohibidos
 
 - Importar data desde presentation.
 - Poner reglas de acierto o timing en widgets/BLoC.

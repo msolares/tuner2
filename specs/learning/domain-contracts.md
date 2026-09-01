@@ -118,6 +118,27 @@ final class LessonChart {
 - Los eventos simultaneos se agrupan en un unico `LessonChordEvent`.
 - Las notas ligadas se fusionan en un unico evento sostenido y no exigen un nuevo ataque.
 
+### Construccion y rechazo
+
+- IDs, titulos, subtitulos, simbolos y nombres de origen no pueden estar vacios ni contener solo whitespace.
+- Todo MIDI esta en `0..127`; toda cuerda en `1..6`; todo traste en `0..24`.
+- `GuitarTuningSpec` contiene exactamente una entrada por cuerda, ordenada 1..6 y sin duplicados.
+- Ticks estructurales son enteros no negativos. Una seccion cumple `endTick > startTick`; un evento cumple `durationTicks > 0`.
+- Tempo y meter tienen ticks unicos en orden ascendente y empiezan en 0. BPM es finito y esta en `20.0..300.0`.
+- El denominador de meter pertenece a `{1, 2, 4, 8, 16, 32}` y el numerador a `1..32`.
+- Eventos y secciones tienen IDs unicos, orden no decreciente por tick y terminan como maximo en `totalTicks`.
+- `schemaVersion` solo admite `1` en E08.
+- Un power chord tiene dos clases tonales separadas por cuarta/quinta justa. Una triada tiene tres clases con forma mayor `{0,4,7}` o menor `{0,3,7}` desde alguna fundamental.
+- `mutedStrings` es exactamente el complemento de las cuerdas presentes en `tones` dentro de `1..6`.
+- Invariantes locales de rango/formato lanzan `ArgumentError` o `RangeError`. Invariantes musicales tipadas lanzan `LessonException` con `invalidTuning`, `inconsistentPitchAndFret`, `unsupportedChord` o `sessionInvariantViolation` segun corresponda.
+
+### Inmutabilidad, igualdad y copia
+
+- Todas las entidades y value objects usan igualdad por valor.
+- Toda lista, set, mapa o bytes recibidos se copian defensivamente y se exponen como colecciones no modificables.
+- Los modelos con mas de un campo ofrecen `copyWith` y reconstruyen mediante el constructor validado.
+- Los puertos no exponen DTOs, parsers ni tipos de plataforma.
+
 ## Documento y puertos de contenido
 
 ```dart
@@ -167,6 +188,8 @@ Invariantes del catalogo E08:
 - `sequenceIndex >= 0` y `estimatedMinutes > 0`.
 - Todas las clases locales estan disponibles: progreso, bloqueos, estrellas, usuario y API quedan fuera de E08.
 - `LessonSummary` no contiene rutas, nombres de assets, XML ni estado visual.
+- `LessonDocument.sourceName` y `bytes` no estan vacios; cada byte esta en `0..255` y la lista se copia defensivamente.
+- `LessonImportOptions.partId/sectionTitle`, cuando existen, no estan vacios. Su `copyWith` permite conservarlos o borrarlos explicitamente.
 
 ## Observaciones de interpretacion
 
@@ -215,6 +238,10 @@ abstract interface class PerformanceAnalyzer {
 Invariantes:
 
 - `pitchClassStrengths.length == 12` en orden C..B.
+- MIDI esta en `0..127`; pitch classes en `0..11`; timestamps y `onsetSequence` son no negativos.
+- Confidence, onset confidence y fortalezas cromaticas son finitas y estan en `0.0..1.0`; Hz es finito y positivo; cents es finito.
+- Un target de acorde contiene 2 o 3 clases tonales unicas y cumple el mismo perfil power chord/triada del chart.
+- `a4Hz` es finito y esta en `415.0..466.0`.
 - El analyzer no decide `correct/incorrect`; produce evidencia.
 - `setTarget` permite optimizacion dirigida, pero no altera la semantica de la observacion.
 - `onsetSequence` aumenta solo ante un ataque nuevo y nunca retrocede durante una sesion.
@@ -235,6 +262,8 @@ final class LessonEvaluationPolicy {
   final int reentryTicks;                  // default 960
 }
 ```
+
+Todos los doubles de la politica son finitos. Confidences/strengths estan en `0.0..1.0`, `noteMaxAbsCents` en `0.0..100.0`, ventanas temporales son enteros positivos y `reentryTicks >= 0`. `LessonEvaluationPolicy.defaults` usa exactamente los valores indicados arriba y `copyWith` vuelve a validar.
 
 La velocidad inicial de toda sesion E08 es `0.70` salvo eleccion explicita del usuario antes de comenzar.
 
@@ -265,10 +294,11 @@ abstract interface class LessonClock {
 }
 ```
 
-- Velocidades E08: `0.50 .. 1.00`, pasos UI de `0.05`.
+- Constantes de velocidad E08: `lessonMinSpeed = 0.50`, `lessonMaxSpeed = 1.00`, `lessonSpeedStep = 0.05` y `lessonDefaultSpeed = 0.70`.
 - E08 no produce audio; `LessonClock` solo gobierna tiempo musical y cuenta visual.
 - El clock usa objetivos monotónicos absolutos; no acumula deltas de callbacks.
 - El repaint interpola, pero nunca incrementa la posicion de dominio.
+- `LessonClockTick.positionTicks` es finito y puede ser negativo solo para cuenta/reentrada transitoria; `monotonicTimestampMs >= 0`.
 
 ## Estado de sesion
 
@@ -302,6 +332,8 @@ final class LessonViewportSlice {
 ```
 
 `LessonViewportSlice` es una salida de dominio sin coordenadas, colores, textos localizados ni tipos Flutter. Presentation la convierte a su propio `FretboardRenderModel`.
+
+`LessonViewportSlice.positionTicks` es finito, `windowEndTick >= windowStartTick`, su lista es inmutable y `currentTargetId`, cuando existe, no esta vacio.
 
 Transiciones no listadas en `use-cases.md` son invalidas y deben ignorarse o producir error de dominio tipado; nunca se inventa una transicion desde BLoC.
 
